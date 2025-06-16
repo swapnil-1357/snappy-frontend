@@ -3,21 +3,22 @@ import { Button } from '@/components/ui/button'
 import { SlSocialSkype } from 'react-icons/sl'
 import { Link } from 'react-router-dom'
 
-
 const Home = () => {
   return (
-    <div className='flex flex-col gap-8 justify-center items-center min-h-screen'>
-      <div className='flex gap-2 items-center text-8xl font-bold'>
+    <div className='flex flex-col gap-5 justify-center items-center min-h-screen'>
+      {/* Responsive text sizes */}
+      <div className='flex gap-4 items-center text-6xl md:text-8xl font-bold'>
         <SlSocialSkype />
-        Snappy
+        <div>Snappy</div>
       </div>
-      <div className='flex flex-col justify-center items-center'>
-        <div className='text-2xl'> Social media next generation applicaiton </div>
-        <div className='text-2xl'>Register now !!!</div>
+      <div className='flex flex-col gap-4 justify-center items-center'>
+        <div className='text-lg md:text-2xl'>Social media next generation application</div>
+        {/* <div className='text-lg md:text-lg italic'>Register now !!!</div> */}
+        <Link to={`/sign-up`}>
+          <Button>Get Started</Button>
+        </Link>
       </div>
-      <Link to={`/sign-up`}>
-        <Button>Get Started</Button>
-      </Link>
+
     </div>
   )
 }

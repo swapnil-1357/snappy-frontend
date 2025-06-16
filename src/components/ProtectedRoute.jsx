@@ -1,24 +1,27 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { toast } from './ui/use-toast';
+import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+import Loader from './Loader'
 
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated } = useAuth();
-    const navigate = useNavigate();
+    const { isAuthenticated, user, isAuthLoading } = useAuth()
+    const navigate = useNavigate()
 
     useEffect(() => {
-        if(!isAuthenticated){
-            toast({
-                title: 'Unauthorized',
-                description: 'You must have to sign in',
-                variant: 'destructive'
-            })
-            navigate('/sign-in')
+        if (!isAuthLoading) {
+            if (!user) {
+                navigate('/sign-in')
+            } else if (user.emailVerified === false) {
+                navigate('/sign-in')
+            }
         }
-    }, [isAuthenticated, navigate]);
+    }, [isAuthLoading, user, navigate])
 
-    return children;
-};
+    if (isAuthLoading) {
+        return <Loader />
+    }
 
-export default ProtectedRoute;
+    return isAuthenticated ? children : null
+}
+
+export default ProtectedRoute

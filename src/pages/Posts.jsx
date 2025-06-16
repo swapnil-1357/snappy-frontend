@@ -6,6 +6,7 @@ import PostCard from '@/components/PostCard'
 import PostsSkeleton from '@/components/skeletons/PostsSkeleton'
 import Navbar from '@/components/Navbar'
 import { usePost } from '@/context/PostContext'
+import Stories from '@/components/Stories'
 
 
 
@@ -19,11 +20,15 @@ const Posts = () => {
 
     return (
         <div className='flex flex-col gap-4'>
-            <Navbar/>
-            
-            {isLoadingPosts && <PostsSkeleton/>}
+
+            <div>
+                <Navbar />
+                <Stories />
+            </div>
+
+            {isLoadingPosts && <PostsSkeleton />}
             {!isLoadingPosts && <div className='flex gap-5 flex-col justify-center items-center'>
-                <div className='flex items-center justify-between gap-10'>
+                <div className='flex items-center justify-between gap-8 px-[1.1rem]'>
                     <Input
                         placeholder="Search Posts by Username"
                         value={searchQuery}

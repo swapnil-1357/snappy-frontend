@@ -41,20 +41,6 @@ const SignIn = () => {
             const response = await signIn(email, password)
 
             if (!response.success) {
-                toast({
-                    title: 'Signin Failed',
-                    description: 'Incorrect credentials',
-                    variant: 'destructive'
-                })
-                return
-            }
-
-            if (!response.emailVerified) {
-                toast({
-                    title: 'Email Not Verified',
-                    description: 'Please verify your email before signing in',
-                    variant: 'destructive'
-                })
                 return
             }
 
@@ -66,12 +52,9 @@ const SignIn = () => {
             navigate('/posts')
 
         } catch (error) {
-            const errorMessage = error.response?.data?.message || "Signin Failed"
-            console.log(error)
-
             toast({
                 title: 'Signin Failed',
-                description: errorMessage,
+                description: error.message || 'There was an error during sign-in.',
                 variant: 'destructive'
             })
         } finally {
@@ -81,7 +64,7 @@ const SignIn = () => {
 
     return (
         <div className='flex flex-col gap-8 justify-center items-center min-h-screen'>
-            <Card className="w-[500px] p-5">
+            <Card className="w-[400px] md:w-[500px] p-5">
                 <CardHeader className='flex justify-center items-center'>
                     <CardTitle className='flex items-center gap-2 text-5xl font-bold'>
                         <SlSocialSkype />
@@ -117,7 +100,7 @@ const SignIn = () => {
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 justify-center">
                     <div>Not registered yet? <Link className='text-blue-500 underline' to='/sign-up'>SignUp</Link> </div>
-                    
+
                     <div className='flex items-center gap-6'>
                         <Button onClick={onSubmit} disabled={isSubmitting} >
                             {
@@ -128,7 +111,7 @@ const SignIn = () => {
                                 ) : ('SignIn')
                             }
                         </Button>
-                        
+
                         <Card onClick={() => signInUsingGoogle()} className='flex gap-2 items-center cursor-pointer rounded-full p-2 bg-white'>
                             <FcGoogle className='text-2xl' />
                         </Card>

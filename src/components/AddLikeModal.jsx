@@ -5,22 +5,23 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { useUser } from '@/context/UserContext'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import LikeCard from './LikeCard'
+import { Button } from './ui/button'
 
 const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
     const { getAvatar } = useUser()
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="max-w-[400px] py-10">
                 <DialogHeader>
                     <VisuallyHidden.Root>
                         <DialogTitle>People Who Liked This Post</DialogTitle>
                     </VisuallyHidden.Root>
                 </DialogHeader>
 
-                <button onClick={addLike} className="w-full p-2 bg-red-500 text-white rounded">
+                <Button onClick={addLike} className="w-full p-2 bg-red-500 text-white rounded">
                     ❤️ Like
-                </button>
+                </Button>
 
                 <div className="flex flex-col gap-4">
                     {likes.length > 0 ? (
@@ -31,7 +32,7 @@ const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
                         <div className="text-gray-500 text-center">No likes yet.</div>
                     )}
                 </div>
-                
+
             </DialogContent>
         </Dialog>
     )

@@ -1,0 +1,89 @@
+.swiper {
+  width: 100%;
+  height: 100%;
+}
+  
+.swiper-slide {
+  text-align: center;  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+  
+.swiper-slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.swiper-pagination-bullets {
+  display: none;
+}
+
+.rounded-ring {
+  position: relative; /* Position relative for pseudo-element positioning */
+  display: inline-block; /* Adjust to fit content */
+  /* padding: 20px; Space for content */
+  /* background: white; Inner background */
+  border-radius: 50%; /* Make it a circle */
+  z-index: 1; /* Content stays above the pseudo-element */
+}
+
+.rounded-ring::before {
+  content: '';
+  position: absolute;
+  top: -5px; /* Thickness of the ring */
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background: linear-gradient(to left, #4b134f, #c94b4b); /* Gradient color */
+  border-radius: 50%; /* Make it circular */
+  z-index: -1; /* Place behind the content */
+}
+
+.autoplay-progress {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: var(--swiper-theme-color);
+}
+
+.autoplay-progress svg {
+  --progress: 0;
+  position: absolute;
+  left: 0;
+  top: 0px;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+  stroke-width: 4px;
+  stroke: var(--swiper-theme-color);
+  fill: none;
+  stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
+  stroke-dasharray: 125.6;
+  transform: rotate(-90deg);
+}
+
+
+.swiper-container {
+  position: relative;
+  width: 100%;
+  height: 500px;
+  overflow: hidden;
+  border: 2px solid #ccc; /* Optional border for the container */
+}
+
+/* Image */
+.swiper-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Ensures the image covers the area without distortion */
+}

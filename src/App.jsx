@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom'
 import Home from './pages/Home'
 import SignIn from './pages/Signin'
@@ -11,27 +11,42 @@ import { UserProvider } from './context/UserContext'
 import { PostProvider } from './context/PostContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import NotFound from './components/NotFound'
-import AccessDenied from './components/AccessDenied'
-
-
-
+import Loader from './components/Loader'
+import { StoryProvider } from './context/StoryContext'
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth()
+  const { isAuthLoading, user } = useAuth()
+
+  // Wait until authentication is done
+  if (isAuthLoading) {
+    return <Loader />
+  }
 
   return (
     <Routes>
       <Route path='/' element={<Home />} />
 
+      {/* Sign-In Route */}
       <Route
         path='/sign-in'
-        element={isAuthenticated ? <Navigate to='/posts' /> : <SignIn />}
-      />
-      <Route
-        path='/sign-up'
-        element={isAuthenticated ? <Navigate to='/posts' /> : <SignUp />}
+        element={
+          user?.emailVerified
+            ? <Navigate to='/posts' replace />
+            : <SignIn />
+        }
       />
 
+      {/* Sign-Up Route */}
+      <Route
+        path='/sign-up'
+        element={
+          user?.emailVerified
+            ? <Navigate to='/posts' replace />
+            : <SignUp />
+        }
+      />
+
+      {/* Protected Posts Route */}
       <Route
         path='/posts'
         element={
@@ -40,6 +55,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* Protected User Route */}
       <Route
         path='/u/:param_username'
         element={
@@ -48,6 +65,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+
+      {/* 404 Route */}
       <Route path='*' element={<NotFound />} />
     </Routes>
   )
@@ -59,8 +78,10 @@ const App = () => {
       <AuthProvider>
         <UserProvider>
           <PostProvider>
-            <AppRoutes />
-            <Footer />
+            <StoryProvider>
+              <AppRoutes />
+              <Footer />
+            </StoryProvider>
           </PostProvider>
         </UserProvider>
       </AuthProvider>

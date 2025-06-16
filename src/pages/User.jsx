@@ -27,8 +27,9 @@ const User = () => {
         setFilteredPosts(myPosts)
     }, [posts, param_username])
 
+
     return (
-        <div className='px-32'>
+        <div className=''>
             <div className='flex flex-col'>
                 <Navbar />
                 <div className='flex items-center justify-center'>
@@ -38,7 +39,7 @@ const User = () => {
                             : <Profile
                                 userProfile={userProfile}
                                 userAvatar={userAvatar}
-                                posts={filteredPosts}
+                                posts={posts}
                                 param_username={param_username}
                             />
                     }

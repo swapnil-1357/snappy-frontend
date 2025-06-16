@@ -8,7 +8,6 @@ import { useDebounceCallback } from 'usehooks-ts'
 import { useNavigate } from 'react-router-dom'
 
 
-// https://snappy-backend-wodp.onrender.com
 
 const UsernameModal = ({ showModal, onClose, onSave, defaultName, defaultUsername, userEmail }) => {
     const [name, setName] = useState(defaultName || '')
@@ -74,7 +73,7 @@ const UsernameModal = ({ showModal, onClose, onSave, defaultName, defaultUsernam
     const handleClose = () => {
         const generatedUsername = `${userEmail.split('@')[0].toLowerCase()}`
         setUsername(generatedUsername)
-        console.log(generatedUsername)
+        // console.log(generatedUsername)
 
         toast({
             title: 'Username set',
@@ -82,8 +81,8 @@ const UsernameModal = ({ showModal, onClose, onSave, defaultName, defaultUsernam
             variant: 'default'
         })
 
-        console.log(name, generatedUsername)
-        onSave({ name, username: generatedUsername })      
+        // console.log(name, generatedUsername)
+        onSave({ name, username: generatedUsername })
         navigate('/posts')
     }
 

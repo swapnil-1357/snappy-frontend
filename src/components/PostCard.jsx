@@ -13,24 +13,38 @@ import { Skeleton } from './ui/skeleton'
 import AddLikeModal from './AddLikeModal'
 import { Link } from 'react-router-dom'
 
+
+const GET_AVATAR_URL = `${import.meta.env.VITE_USER_URL}/get-avatar`
+
+
 const PostCard = ({ post }) => {
+
     const { user, userDetails } = useAuth()
     const { deletePost, toggleLike } = usePost()
-    const { getAvatar } = useUser()
     const [isModalOpen, setModalOpen] = useState(false)
     const [isShareModalOpen, setShareModalOpen] = useState(false)
-    // const [liked, setLiked] = useState(false)
     const [avatarURL, setAvatarURL] = useState(null)
     const [imageLoading, setImageLoading] = useState(true)
     const [isLikeModalOpen, setIsLikeModalOpen] = useState(false)
 
-    useEffect(() => {
-        const fetchAvatar = async () => {
-            const url = await getAvatar(post.username)
-            setAvatarURL(url)
+
+    const fetchImage = async (username) => {
+        try {
+            const GET_AVATAR_URL_USERNAME = GET_AVATAR_URL + `?username=${username}`
+            const response = await fetch(GET_AVATAR_URL_USERNAME)
+            const data = await response.json()
+
+            if (data.success) {
+                setAvatarURL(data.avatar)
+            }
+        } catch (error) {
+
         }
-        fetchAvatar()
-    }, [post.username, getAvatar])
+    }
+
+    useEffect(() => {
+        fetchImage(post.username)
+    }, [post.username])
 
     const liked = post.likes.includes(userDetails?.username);
 
@@ -58,7 +72,7 @@ const PostCard = ({ post }) => {
 
     return (
         <div>
-            <Card className="w-[350px]">
+            <Card className="w-[380px]">
                 <CardHeader className='flex flex-row justify-between'>
                     <div className='flex gap-3 items-center'>
                         <Avatar className='h-10 w-10'>
@@ -83,14 +97,14 @@ const PostCard = ({ post }) => {
                 </CardHeader>
 
                 <CardContent>
-                    <Card>
+                    <Card className="bg-white">
                         {imageLoading && (
-                            <Skeleton className='h-[300px] w-[300px] rounded-md' />
+                            <Skeleton className='h-[330px] w-[330px] rounded-md' />
                         )}
                         <img
                             src={post.imageUrl}
                             alt='Post Image'
-                            className='h-full w-full border-2 rounded-md max-h-[300px] max-w-[300px]'
+                            className='h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px]'
                             onLoad={handleImageLoad}
                         />
                     </Card>

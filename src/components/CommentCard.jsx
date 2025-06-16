@@ -9,36 +9,42 @@ import { useUser } from '@/context/UserContext'
 import { Link } from 'react-router-dom'
 
 
-
 const CommentCard = ({ comment, onDelete }) => {
-    const { getAvatar } = useUser()
+    const { fetchImage } = useUser()
     const [avatarURL, setAvatarURL] = useState(null)
 
-    useEffect(() => {
-        const fetchAvatar = async () => {
-            const url = await getAvatar(comment.commentor)
+    const fetchAvatar = async (username) => {
+        try {
+            const url = await fetchImage(username)
             setAvatarURL(url)
+        } catch (error) {
+
         }
-        fetchAvatar()
-    }, [comment.commentor, getAvatar])
+    }
+
+    useEffect(() => {
+        fetchAvatar(comment.commentor)
+    }, [comment.commentor])
 
     return (
         <Card className="p-2">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center items-start gap-3">
                 <Avatar className='w-10 h-10'>
                     <AvatarImage src={avatarURL} alt={comment.commentor} />
                     <AvatarFallback>{comment.commentor[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col w-full">
                     <div className="flex items-center justify-between">
+
                         <div className="flex items-center gap-2">
-                            <Link className="text-sm text-blue-500" to={`/u/${comment.commentor}`}>
+                            <Link className="text-sm text-blue-700" to={`/u/${comment.commentor}`}>
                                 @{comment.commentor}
                             </Link>
                             <div className="text-gray-500 text-xs">
                                 {timeAgo(new Date(comment.timestamp))}
                             </div>
                         </div>
+
                         <div
                             className='border-2 p-1 rounded-md cursor-pointer hover:bg-red-500 hover:text-white'
                             onClick={() => onDelete(comment)}

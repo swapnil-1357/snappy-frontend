@@ -4,34 +4,31 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/use-toast'
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Loader2, Plus, X } from 'lucide-react'
-import { usePost } from '@/context/PostContext'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { FaCirclePlus } from "react-icons/fa6";
+import { useStory } from '@/context/StoryContext'
 
 
 
 
-const AddPostModal = () => {
-    const [caption, setCaption] = useState('')
+const AddStoryModal = () => {
+
     const [selectedImage, setSelectedImage] = useState(null)
     const [file, setFile] = useState(null)
     const [open, setOpen] = useState(false)
-    const [isPostAdding, setIsPostAdding] = useState(false)
+    const [isStoryAdding, setIsStoryAdding] = useState(false)
+    
     const { userDetails } = useAuth()
     const fileInputRef = useRef(null)
     const { toast } = useToast()
-    const { addPost } = usePost()
 
-    const handleCaptionChange = (e) => {
-        if (e.target.value.length <= 100) {
-            setCaption(e.target.value)
-        }
-    }
+    const { addStory } = useStory()
+
 
     const handleImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-
+            
             const selectedFile = e.target.files[0]
 
             if (selectedFile.size > 10 * 1024 * 1024) {
@@ -42,7 +39,7 @@ const AddPostModal = () => {
                 })
                 return
             }
-
+            
             setFile(e.target.files[0])
             const reader = new FileReader()
             reader.onloadend = () => {
@@ -55,7 +52,6 @@ const AddPostModal = () => {
     const removeImage = () => {
         setSelectedImage(null)
         setFile(null)
-        setCaption('')
     }
 
     const handleSubmit = async () => {
@@ -69,14 +65,13 @@ const AddPostModal = () => {
             return
         }
 
-        setIsPostAdding(true)
+        setIsStoryAdding(true)
         try {
-            const res = await addPost(userDetails.username, file, caption)
-            // console.log('this is the response of add post: ', res)
+            await addStory(userDetails.username, file)
 
             toast({
                 title: 'Success',
-                description: 'Post uploaded successfully',
+                description: 'Story uploaded successfully',
                 variant: 'default',
             })
 
@@ -84,14 +79,14 @@ const AddPostModal = () => {
             setOpen(false)
 
         } catch (err) {
-            // // // // console.log(err)
             toast({
                 title: 'Error',
-                description: 'Failed to upload post',
+                description: 'Failed to upload story',
                 variant: 'destructive',
             })
         } finally {
-            setIsPostAdding(false)
+            setFile(null)
+            setIsStoryAdding(false)
         }
     }
 
@@ -105,28 +100,28 @@ const AddPostModal = () => {
             removeImage()
         }
     }
-
+    
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="default" className="flex gap-2">
-                    <VisuallyHidden>Add Post</VisuallyHidden>
-                    Add Post
-                    <Plus />
-                </Button>
+                <div>
+                    <VisuallyHidden>Add Story</VisuallyHidden>
+                    <FaCirclePlus className='absolute right-2 bottom-1 text-white border-[3px] rounded-full border-gray-900 h-[30px] w-[30px]' />
+                </div>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add Post</DialogTitle>
+                    <DialogTitle>Select Image</DialogTitle>
                     <DialogDescription>
                         <VisuallyHidden>Description for screen readers</VisuallyHidden>
-                        Add a caption and upload an image less than 10MB
+                        Add image of size less than 10MB
                     </DialogDescription>
                 </DialogHeader>
+                
                 <div>
                     <label
                         htmlFor="image-upload"
-                        className={`block w-full ${selectedImage ? 'h-[400px]' : 'h-48'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
+                        className={`block w-full ${selectedImage ? 'h-[400px]' :  'h-96'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
                     >
                         {selectedImage ? (
                             <div className="relative w-full h-full">
@@ -155,19 +150,11 @@ const AddPostModal = () => {
                         className="hidden"
                     />
                 </div>
-                <div>
-                    <Input
-                        autoComplete="off"
-                        id="caption"
-                        placeholder="Caption (up to 100 characters)"
-                        value={caption}
-                        onChange={handleCaptionChange}
-                    />
-                </div>
+
                 <DialogFooter>
-                    <Button onClick={handleSubmit} disabled={isPostAdding}>
-                        {isPostAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {isPostAdding ? 'Uploading' : 'Post'}
+                    <Button onClick={handleSubmit} disabled={isStoryAdding}>
+                        {isStoryAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {isStoryAdding ? 'Uploading' : 'Post'}
                     </Button>
                 </DialogFooter>
             </DialogContent>
@@ -175,4 +162,4 @@ const AddPostModal = () => {
     )
 }
 
-export default AddPostModal
+export default AddStoryModal
