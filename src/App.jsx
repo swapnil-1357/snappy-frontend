@@ -13,7 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import NotFound from './components/NotFound'
 import Loader from './components/Loader'
 import { StoryProvider } from './context/StoryContext'
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/react"
 
 const AppRoutes = () => {
   const { isAuthLoading, user } = useAuth()
