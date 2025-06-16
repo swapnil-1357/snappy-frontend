@@ -19,7 +19,7 @@
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.2",
     "@radix-ui/react-visually-hidden": "^1.1.0",
-    "@vercel/analytics": "^1.4.1",
+    "@vercel/analytics": "^1.5.0",
     "axios": "^1.7.9",
     "canvas-sketch": "^0.7.7",
     "canvas-sketch-util": "^1.10.0",

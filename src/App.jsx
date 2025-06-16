@@ -13,6 +13,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import NotFound from './components/NotFound'
 import Loader from './components/Loader'
 import { StoryProvider } from './context/StoryContext'
+import { Analytics } from "@vercel/analytics/next"
 
 const AppRoutes = () => {
   const { isAuthLoading, user } = useAuth()
@@ -81,6 +82,7 @@ const App = () => {
             <StoryProvider>
               <AppRoutes />
               <Footer />
+              <Analytics/>
             </StoryProvider>
           </PostProvider>
         </UserProvider>
