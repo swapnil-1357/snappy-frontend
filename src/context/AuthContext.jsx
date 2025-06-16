@@ -162,16 +162,16 @@ export const AuthProvider = ({ children }) => {
 
     const handleSaveUser = async (userData) => {
         try {
-            const url = await uploadGooglePhoto(userData.username, user.photoURL)
+            // const url = await uploadGooglePhoto(userData.username, user.photoURL)
 
-            if (!url) {
-                toast({
-                    title: 'Try with JPG or JPEG or PNG image file',
-                    description: errorData.message || 'Failed to save user details.',
-                    variant: 'destructive',
-                })
-                return
-            }
+            // if (!url) {
+            //     toast({
+            //         title: 'Try with JPG or JPEG or PNG image file',
+            //         description: errorData.message || 'Failed to save user details.',
+            //         variant: 'destructive',
+            //     })
+            //     return
+            // }
 
             const SAVE_USER_URL = `${import.meta.env.VITE_USER_URL}/save-user-in-mongo`
 
@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
                     username: userData.username,
                     email: user.email,
                     isVerified: user.emailVerified,
-                    avatar: url
+                    avatar: "https://github.com/shadcn.png"
                 }),
             })
 
