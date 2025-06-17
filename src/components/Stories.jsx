@@ -88,7 +88,20 @@ const Stories = () => {
         return currentUserStory ? [currentUserStory, ...otherStories] : otherStories
     })()
 
-
+    const getTextClassforTheme = (theme) =>{
+        if(theme === 'dark') {
+            return 'text-white'
+        } 
+        else if(theme === 'light') {
+            return 'text-black'
+        }  
+        else if (theme === 'system') {
+            // Check system preference
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return isDark ? 'text-white' : 'text-black';
+        }
+        return 'text-black';
+    }
     const handleDialogOpen = (story) => {
         setSelectedUser({
             'username': story.username,
@@ -197,7 +210,7 @@ const Stories = () => {
                                             <AvatarFallback>U</AvatarFallback>
                                         </Avatar>
                                         <div className='flex flex-col'>
-                                            <div className={`text-lg ${(theme === 'dark') ? 'text-white' : 'text-black'} `}>{selectedUser.name}</div>
+                                            <div className={`text-lg ${getTextClassforTheme(theme)} `}>{selectedUser.name}</div>
                                             <Link to={`/u/${selectedUser.username}`} className='text-xs text-blue-400 mt-[-4px] underline w-fit'>
                                                 @{selectedUser.username}
                                             </Link>
