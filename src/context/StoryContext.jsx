@@ -101,7 +101,10 @@ export const StoryProvider = ({ children }) => {
     const fetchStories = async (username) => {
         setIsLoadingStories(true)
         try {
-            const response = await fetch(GET_STORIES_URL)
+            const response = await fetch(GET_STORIES_URL, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await response.json()
 
             if (data.success) {
@@ -110,7 +113,7 @@ export const StoryProvider = ({ children }) => {
             }
         } catch (error) {
             // throw new Error('Error fetching stories')
-        } finally{
+        } finally {
             setIsLoadingStories(false)
         }
     }
@@ -124,6 +127,7 @@ export const StoryProvider = ({ children }) => {
 
             const response = await fetch(POST_STORIES_URL, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, storyid, imageUrl, timestamp })
             })
@@ -137,8 +141,8 @@ export const StoryProvider = ({ children }) => {
         } catch (error) {
             // // // console.error('Error adding story:', error)
             throw new Error('Error adding story')
-        } finally{
-            
+        } finally {
+
         }
     }
 
@@ -149,6 +153,7 @@ export const StoryProvider = ({ children }) => {
 
             const response = await fetch(DELETE_STORY_URL, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, storyid })
             })

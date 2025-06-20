@@ -13,6 +13,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { SlSocialSkype } from 'react-icons/sl'
 import { useAuth } from '@/context/AuthContext'
 import { FcGoogle } from "react-icons/fc";
+import Loader from '@/components/Loader'
 
 
 
@@ -67,8 +68,7 @@ const SignUp = () => {
                 return
             }
 
-            // console.log(name, username, email, password)
-            const signUpUser = await signUp(name, username, email, password)
+            await signUp(name, username, email, password)
             navigate('/sign-in')
 
         } catch (error) {
@@ -98,6 +98,7 @@ const SignUp = () => {
                         headers: {
                             'Content-Type': 'application/json',
                         },
+                        credentials: 'include'
                     })
 
                     if (!response.ok) {
@@ -133,7 +134,7 @@ const SignUp = () => {
 
     return (
         <div className='flex flex-col gap-8 justify-center items-center min-h-screen'>
-            <Card className="w-[500px] p-5">
+            <Card className="w-[400px] md:w-[500px] p-5">
                 <CardHeader className='flex justify-center items-center'>
                     <CardTitle className='flex items-center gap-2 text-5xl font-bold'>
                         <SlSocialSkype />

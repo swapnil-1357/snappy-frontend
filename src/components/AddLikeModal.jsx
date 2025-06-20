@@ -24,7 +24,7 @@ const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
                 </Button>
 
                 <div className="flex flex-col gap-4">
-                    {likes.length > 0 ? (
+                    {likes?.length > 0 ? (
                         likes.map((username, index) => (
                             <LikeCard key={index} liker={username} />
                         ))

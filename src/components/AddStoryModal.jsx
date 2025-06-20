@@ -18,8 +18,8 @@ const AddStoryModal = () => {
     const [file, setFile] = useState(null)
     const [open, setOpen] = useState(false)
     const [isStoryAdding, setIsStoryAdding] = useState(false)
-    
-    const { userDetails } = useAuth()
+
+    const { user } = useAuth()
     const fileInputRef = useRef(null)
     const { toast } = useToast()
 
@@ -28,7 +28,7 @@ const AddStoryModal = () => {
 
     const handleImageChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            
+
             const selectedFile = e.target.files[0]
 
             if (selectedFile.size > 10 * 1024 * 1024) {
@@ -39,7 +39,7 @@ const AddStoryModal = () => {
                 })
                 return
             }
-            
+
             setFile(e.target.files[0])
             const reader = new FileReader()
             reader.onloadend = () => {
@@ -55,7 +55,7 @@ const AddStoryModal = () => {
     }
 
     const handleSubmit = async () => {
-        if (!file || !userDetails) {
+        if (!file || !user) {
             toast({
                 title: 'Error',
                 description: 'Please select an image and ensure you are logged in',
@@ -67,7 +67,7 @@ const AddStoryModal = () => {
 
         setIsStoryAdding(true)
         try {
-            await addStory(userDetails.username, file)
+            await addStory(user.username, file)
 
             toast({
                 title: 'Success',
@@ -100,7 +100,7 @@ const AddStoryModal = () => {
             removeImage()
         }
     }
-    
+
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
@@ -117,11 +117,11 @@ const AddStoryModal = () => {
                         Add image of size less than 10MB
                     </DialogDescription>
                 </DialogHeader>
-                
+
                 <div>
                     <label
                         htmlFor="image-upload"
-                        className={`block w-full ${selectedImage ? 'h-[400px]' :  'h-96'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
+                        className={`block w-full ${selectedImage ? 'h-[400px]' : 'h-96'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
                     >
                         {selectedImage ? (
                             <div className="relative w-full h-full">

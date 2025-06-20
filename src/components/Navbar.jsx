@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SlSocialSkype } from "react-icons/sl";
-import { User, LayoutDashboard, Contact, Menu } from "lucide-react";
+import { User, LayoutDashboard, Contact, Menu, HandCoins } from "lucide-react";
 import { Link } from 'react-router-dom';
 import {
     Tooltip,
@@ -14,8 +14,9 @@ import { useTheme } from './ThemeProvider';
 
 const Navbar = () => {
     const { theme } = useTheme();
-    const { logOut, userDetails } = useAuth();
-    const username = userDetails ? userDetails.username : 'undefined';
+    const { logOut, userDetails, user } = useAuth();
+    console.log('this is user: ', user)
+    const username = user ? user.username : 'undefined';
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     return (
@@ -78,6 +79,7 @@ const Navbar = () => {
                     </TooltipProvider>
 
 
+
                     <Button onClick={logOut}>
                         Logout
                     </Button>
@@ -96,6 +98,7 @@ const Navbar = () => {
                     <a className={`text-md flex items-center gap-2`} href="mailto:sukanil1357@gmail.com">
                         <Contact className={`h-5 w-5`} /> Contact
                     </a>
+
                     <Button onClick={logOut}>
                         Logout
                     </Button>
@@ -106,5 +109,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-

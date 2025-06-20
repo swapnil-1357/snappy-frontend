@@ -8,6 +8,7 @@ import { auth, storage } from "../firebaseConfig"
 import UsernameModal from "@/components/UsernameModal"
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage"
 import Loader from "@/components/Loader"
+import axios from "axios"
 
 
 const AuthContext = createContext()
@@ -15,6 +16,7 @@ const AuthContext = createContext()
 export const AuthProvider = ({ children }) => {
     const [isAuthLoading, setIsAuthLoading] = useState(true)
     const [user, setUser] = useState(null)
+    const [savedUser, setSavedUser] = useState(null)
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [isEmailVerified, setIsEmailVerified] = useState(false)
     const [userDetails, setUserDetails] = useState(null)
@@ -25,25 +27,29 @@ export const AuthProvider = ({ children }) => {
     const { toast } = useToast()
     const navigate = useNavigate()
 
-    const fetchUserDetails = async (email) => {
-        try {
-            const response = await fetch(`${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${email}`);
-            const data = await response.json()
-            if (data.success) {
-                setUserDetails(data.user)
-            }
-        } catch (error) {
-            // console.error('Error fetching user details:', error)
-        }
+    const handleUserProfileUpdate = (data) => {
+        setUser(data)
     }
 
     const signIn = async (email, password) => {
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password)
-            const user = userCredential.user
+            const res = await axios.post(`${import.meta.env.VITE_AUTH_URL}/signin`,
+                { email, password },
+                { withCredentials: true }
+            )
+            console.log('this is our response signin: ', res)
+            if (!res.data?.success) {
+                toast({
+                    title: 'Error',
+                    description: res.data?.message || 'Something wrong',
+                    variant: 'destructive'
+                })
+            }
 
-            // Check if email is verified
-            if (!user.emailVerified) {
+            const user = res.data?.message.user
+            console.log('signin user: ', user)
+
+            if (user?.isVerified && !user.isVerified) {
                 toast({
                     title: "Email Not Verified",
                     description: "Please verify your email before signing in.",
@@ -55,10 +61,11 @@ export const AuthProvider = ({ children }) => {
                 return { success: false, emailVerified: false, user: null }
             }
 
-            // If email is verified, set the user and authentication state
             setUser(user)
             setIsAuthenticated(true)
-            setIsEmailVerified(user.emailVerified)
+            setIsEmailVerified(user.isVerified)
+
+            localStorage.setItem('snappyUser', JSON.stringify(user))
 
             toast({
                 title: "Welcome",
@@ -66,7 +73,8 @@ export const AuthProvider = ({ children }) => {
                 variant: "success"
             })
 
-            return { success: true, emailVerified: user.emailVerified, user }
+            return { success: true, emailVerified: user.isVerified, user }
+
         } catch (err) {
             // Handle authentication errors
             handleAuthError(err)
@@ -84,16 +92,35 @@ export const AuthProvider = ({ children }) => {
 
     const signUp = async (name, username, email, password) => {
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-            const user = userCredential.user
-            await sendEmailVerification(user)
+            const res = await axios.post(`${import.meta.env.VITE_AUTH_URL}/signup`,
+                { name, username, email, password },
+                { withCredentials: true }
+            )
+            console.log(res)
+            if (!res.data.success) {
+                toast({
+                    title: 'Error',
+                    description: res.data?.message || 'Something wrong',
+                    variant: 'destructive'
+                })
+            }
 
-            const SAVE_USER_URL = `${import.meta.env.VITE_USER_URL}/save-user-in-mongo`
-            await fetch(SAVE_USER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, username, email, isVerified: user.emailVerified })
-            })
+            const savedUser = res.data?.message?.user
+            // const sessionToken = res.data?.message?.token
+            setSavedUser(savedUser)
+            setUserDetails(savedUser)
+            localStorage.setItem('snappyUser', JSON.stringify(savedUser))
+
+            // const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+            // const user = userCredential.user
+            // await sendEmailVerification(user)
+
+            // const SAVE_USER_URL = `${import.meta.env.VITE_USER_URL}/save-user-in-mongo`
+            // await fetch(SAVE_USER_URL, {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({ name, username, email, isVerified: user.emailVerified })
+            // })
 
             toast({
                 title: "Account Created",
@@ -101,9 +128,10 @@ export const AuthProvider = ({ children }) => {
                 variant: "default",
             })
 
-            setUser(user)
-            setIsAuthenticated(true)
-            setIsEmailVerified(user.emailVerified)
+            // setUser(savedUser)
+            // setIsAuthenticated(true)
+            // setIsEmailVerified(savedUser.isVerified)
+
         } catch (err) {
             handleAuthError(err)
         }
@@ -119,7 +147,10 @@ export const AuthProvider = ({ children }) => {
             setIsEmailVerified(user.emailVerified)
             setDefaultName(user.displayName || '')
 
-            const response = await fetch(`${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${user.email}`)
+            const response = await fetch(`${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${user.email}`, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await response.json()
 
             if (data.success) {
@@ -144,9 +175,35 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
+    const logOut = () => {
+        // signOut(auth).then(() => {
+        //     setUser(null)
+        //     setIsAuthenticated(false)
+        //     setIsEmailVerified(false)
+        //     navigate("/sign-in")
+        //     toast({
+        //         title: "Logged Out",
+        //         description: "You have been successfully logged out.",
+        //         variant: "default",
+        //     })
+        // }).catch((err) => {
+        //     toast({
+        //         title: "Log Out Error",
+        //         description: "Failed to log out. Please try again.",
+        //         variant: "destructive",
+        //     })
+        //     setUser(null)
+        //     setIsAuthenticated(false)
+        //     setIsEmailVerified(false)
+        // })
+    }
+
     const uploadGooglePhoto = async (username, photoURL) => {
         try {
-            const response = await fetch(photoURL)
+            const response = await fetch(photoURL, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const blob = await response.blob()
             const storageRef = ref(storage, `snappy/avatars/${username}`)
 
@@ -162,16 +219,16 @@ export const AuthProvider = ({ children }) => {
 
     const handleSaveUser = async (userData) => {
         try {
-            // const url = await uploadGooglePhoto(userData.username, user.photoURL)
+            const url = await uploadGooglePhoto(userData.username, user.photoURL)
 
-            // if (!url) {
-            //     toast({
-            //         title: 'Try with JPG or JPEG or PNG image file',
-            //         description: errorData.message || 'Failed to save user details.',
-            //         variant: 'destructive',
-            //     })
-            //     return
-            // }
+            if (!url) {
+                toast({
+                    title: 'Try with JPG or JPEG or PNG image file',
+                    description: 'Failed to save user details.',
+                    variant: 'destructive',
+                })
+                return
+            }
 
             const SAVE_USER_URL = `${import.meta.env.VITE_USER_URL}/save-user-in-mongo`
 
@@ -180,12 +237,13 @@ export const AuthProvider = ({ children }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     name: userData.name,
                     username: userData.username,
                     email: user.email,
-                    isVerified: user.emailVerified,
-                    avatar: "https://github.com/shadcn.png"
+                    isVerified: user.isVerified,
+                    avatar: url
                 }),
             })
 
@@ -199,7 +257,7 @@ export const AuthProvider = ({ children }) => {
                     name: userData.name,
                     username: userData.username,
                     email: user.email,
-                    isVerified: user.emailVerified,
+                    isVerified: user.isVerified,
                     user_avatar: userData.avatar
                 })
 
@@ -225,28 +283,6 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const logOut = () => {
-        signOut(auth).then(() => {
-            setUser(null)
-            setIsAuthenticated(false)
-            setIsEmailVerified(false)
-            navigate("/sign-in")
-            toast({
-                title: "Logged Out",
-                description: "You have been successfully logged out.",
-                variant: "default",
-            })
-        }).catch((err) => {
-            toast({
-                title: "Log Out Error",
-                description: "Failed to log out. Please try again.",
-                variant: "destructive",
-            })
-            setUser(null)
-            setIsAuthenticated(false)
-            setIsEmailVerified(false)
-        })
-    }
 
     const handleAuthError = (err) => {
         if (err.code === 'auth/wrong-password') {
@@ -271,32 +307,35 @@ export const AuthProvider = ({ children }) => {
     }
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setIsAuthLoading(true)
-            if (user && user.emailVerified) {
-                setUser(user)
-                setIsAuthenticated(true)
-                setIsEmailVerified(user.emailVerified)
-                await fetchUserDetails(user.email)
-            } else {
-                setUser(null)
-                setIsAuthenticated(false)
-                setIsEmailVerified(false)
+        const snappyUser = localStorage.getItem('snappyUser')
+        if (snappyUser) {
+            try {
+                const parsedUser = JSON.parse(snappyUser)
+                setUser(parsedUser)
+            } catch (err) {
+                console.error('Invalid JSON in snappyUser:', err)
+                localStorage.removeItem('snappyUser')
             }
-            setIsAuthLoading(false)
-        })
-
-        return () => unsubscribe()
+        }
     }, [])
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    useEffect(() => {
+        console.log('useEffect user:', user)
+        if (user?.isVerified) {
+            navigate('/posts')
+        } else {
+            navigate('/')
+        }
+    }, [user])
+
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
     return (
         <AuthContext.Provider value={{
-            user, userDetails, isAuthenticated, isEmailVerified,
-            signInUsingGoogle, logOut, signIn, signUp, isAuthLoading
+            savedUser, user, userDetails, isAuthenticated, isEmailVerified,
+            signInUsingGoogle, logOut, signIn, signUp, isAuthLoading, setUser
         }}>
             {children}
             {showUsernameModal && (
@@ -320,4 +359,3 @@ export const useAuth = () => {
     }
     return context
 }
-

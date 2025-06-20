@@ -17,9 +17,9 @@ const ProtectedRoute = ({ children }) => {
         }
     }, [isAuthLoading, user, navigate])
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
     return isAuthenticated ? children : null
 }

@@ -33,6 +33,7 @@ const UsernameModal = ({ showModal, onClose, onSave, defaultName, defaultUsernam
                         headers: {
                             'Content-Type': 'application/json',
                         },
+                        credentials: 'include'
                     })
 
                     if (!response.ok) {

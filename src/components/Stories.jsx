@@ -48,19 +48,19 @@ const Stories = () => {
     const navigate = useNavigate()
 
 
-    if (isAuthLoading) {
-        return <Loader />
-    }
+    // if (isAuthLoading) {
+    //     return <Loader />
+    // }
 
-    if (!user) {
-        navigate('/sign-in')
-        return null
-    }
+    // if (!user) {
+    //     navigate('/sign-in')
+    //     return null
+    // }
 
-    if (!user.emailVerified) {
-        navigate('/sign-in')
-        return null
-    }
+    // if (!user.isVerified) {
+    //     navigate('/sign-in')
+    //     return null
+    // }
 
 
     const fetchAvatar = async (username) => {
@@ -83,25 +83,12 @@ const Stories = () => {
     }
 
     const sortedStories = (() => {
-        const currentUserStory = stories.find(story => story.username === userProfile?.username)
-        const otherStories = stories.filter(story => story.username !== userProfile?.username)
+        const currentUserStory = stories.find(story => story.username === user?.username)
+        const otherStories = stories.filter(story => story.username !== user?.username)
         return currentUserStory ? [currentUserStory, ...otherStories] : otherStories
     })()
 
-    const getTextClassforTheme = (theme) =>{
-        if(theme === 'dark') {
-            return 'text-white'
-        } 
-        else if(theme === 'light') {
-            return 'text-black'
-        }  
-        else if (theme === 'system') {
-            // Check system preference
-            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            return isDark ? 'text-white' : 'text-black';
-        }
-        return 'text-black';
-    }
+
     const handleDialogOpen = (story) => {
         setSelectedUser({
             'username': story.username,
@@ -136,14 +123,14 @@ const Stories = () => {
                 >
                     {/* Current user's story or add story button */}
                     <SwiperSlide key="user-profile">
-                        {userDetails && userDetails.username && sortedStories.some(story => story.username === userDetails.username) ? (
+                        {user && user.username && sortedStories.some(story => story.username === user.username) ? (
                             <>
                                 <div
                                     className='border-[0.2rem] border-red-400 rounded-full cursor-pointer'
-                                    onClick={() => handleDialogOpen(sortedStories.find(story => story.username === userDetails.username))}
+                                    onClick={() => handleDialogOpen(sortedStories.find(story => story.username === user.username))}
                                 >
                                     <Avatar className='h-[80px] w-[80px]'>
-                                        {userDetails && userDetails.username && <AvatarImage src={avatars[userDetails.username] || fetchAvatar(userDetails.username) || ''} alt="User Avatar" />}
+                                        {user && user.username && <AvatarImage src={avatars[user.username] || fetchAvatar(user.username) || ''} alt="User Avatar" />}
                                         <AvatarFallback>U</AvatarFallback>
                                     </Avatar>
                                 </div>
@@ -155,7 +142,7 @@ const Stories = () => {
                                 onClick={() => setOpenDialog(true)}
                             >
                                 <Avatar className='h-[80px] w-[80px]'>
-                                    {userDetails && userDetails.username && <AvatarImage src={avatars[userDetails.username] || fetchAvatar(userDetails.username) || ''} alt="User Avatar" />}
+                                    {user && user.username && <AvatarImage src={avatars[user.username] || fetchAvatar(user.username) || ''} alt="User Avatar" />}
                                     <AvatarFallback>U</AvatarFallback>
                                 </Avatar>
 
@@ -165,8 +152,8 @@ const Stories = () => {
                     </SwiperSlide>
 
                     {/* Other users' stories */}
-                    {userDetails && userDetails.username && sortedStories
-                        .filter(story => story.username !== userDetails.username)
+                    {user && user.username && sortedStories
+                        .filter(story => story.username !== user.username)
                         .map((story, index) => (
                             <SwiperSlide key={`story-${index}`}>
                                 <div
@@ -184,7 +171,7 @@ const Stories = () => {
             </div>
 
             {/* Modal for viewing stories */}
-            {selectedStories && selectedStories.length > 0 && <Dialog
+            {selectedStories && selectedStories?.length > 0 && <Dialog
                 open={openDialog}
                 onOpenChange={(isOpen) => {
                     setOpenDialog(isOpen)
@@ -202,7 +189,7 @@ const Stories = () => {
                             <VisuallyHidden>Viewing {selectedUser.name}'s Stories</VisuallyHidden>
                         </DialogTitle>
                         <DialogDescription>
-                            {selectedStories.length > 0 && (
+                            {selectedStories?.length > 0 && (
                                 <div className='flex justify-between'>
                                     <div className='flex gap-3 items-center'>
                                         <Avatar className='h-10 w-10'>
@@ -210,14 +197,14 @@ const Stories = () => {
                                             <AvatarFallback>U</AvatarFallback>
                                         </Avatar>
                                         <div className='flex flex-col'>
-                                            <div className={`text-lg ${getTextClassforTheme(theme)} `}>{selectedUser.name}</div>
+                                            <div className={`text-lg ${(theme === 'dark') ? 'text-white' : 'text-black'} `}>{selectedUser.name}</div>
                                             <Link to={`/u/${selectedUser.username}`} className='text-xs text-blue-400 mt-[-4px] underline w-fit'>
                                                 @{selectedUser.username}
                                             </Link>
                                         </div>
                                     </div>
 
-                                    <div className='pt-4 mt-2'>{storyNumber}/{selectedStories.length}</div>
+                                    <div className='pt-4 mt-2'>{storyNumber}/{selectedStories?.length}</div>
                                 </div>
                             )}
                             <VisuallyHidden>Description for screen readers</VisuallyHidden>

@@ -18,7 +18,7 @@ const AddPostModal = () => {
     const [file, setFile] = useState(null)
     const [open, setOpen] = useState(false)
     const [isPostAdding, setIsPostAdding] = useState(false)
-    const { userDetails } = useAuth()
+    const { user } = useAuth()
     const fileInputRef = useRef(null)
     const { toast } = useToast()
     const { addPost } = usePost()
@@ -59,7 +59,7 @@ const AddPostModal = () => {
     }
 
     const handleSubmit = async () => {
-        if (!file || !userDetails) {
+        if (!file || !user) {
             toast({
                 title: 'Error',
                 description: 'Please select an image and ensure you are logged in',
@@ -71,7 +71,7 @@ const AddPostModal = () => {
 
         setIsPostAdding(true)
         try {
-            const res = await addPost(userDetails.username, file, caption)
+            const res = await addPost(user.username, file, caption)
             // console.log('this is the response of add post: ', res)
 
             toast({

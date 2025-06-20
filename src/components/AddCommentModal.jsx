@@ -46,7 +46,7 @@ const AddCommentModal = ({ comments, whose_post, postid }) => {
                 <DialogTrigger asChild>
                     <div className='flex items-center gap-1 cursor-pointer'>
                         <MessageCircle />
-                        <div className='text-[1.1rem]'>{comments && comments.length}</div>
+                        <div className='text-[1.1rem]'>{comments && comments?.length}</div>
                     </div>
                 </DialogTrigger>
                 <DialogContent

@@ -39,6 +39,7 @@ const SignIn = () => {
         setIsSubmitting(true)
         try {
             const response = await signIn(email, password)
+            console.log('this is calling: ', response)
 
             if (!response.success) {
                 return

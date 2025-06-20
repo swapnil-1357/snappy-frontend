@@ -28,7 +28,7 @@ const PostContext = createContext()
 export const PostProvider = ({ children }) => {
     const { toast } = useToast()
 
-    const { userDetails } = useAuth()
+    const { userDetails, user } = useAuth()
 
     const [isPostAdding, setIsPostAdding] = useState(false)
     const [isPostDeleting, setIsPostDeleting] = useState(false)
@@ -104,7 +104,10 @@ export const PostProvider = ({ children }) => {
         try {
             setIsLoadingPosts(true)
 
-            const response = await fetch(GET_POSTS_URL)
+            const response = await fetch(GET_POSTS_URL, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await response.json()
 
             if (data.success) {
@@ -129,6 +132,7 @@ export const PostProvider = ({ children }) => {
 
             const response = await fetch(ADD_POST_URL, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, postid, imageUrl, caption, timestamp })
             })
@@ -165,7 +169,8 @@ export const PostProvider = ({ children }) => {
             const response = await fetch(DELETE_POST_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, postid })
+                body: JSON.stringify({ username, postid }),
+                credentials: 'include'
             })
 
             // console.log('this is the response: ', response)
@@ -195,7 +200,7 @@ export const PostProvider = ({ children }) => {
     }
 
     const addComment = async (postid, post_creator_username, content) => {
-        if (!userDetails || !userDetails.username) {
+        if (!user || !user.username) {
             toast({
                 title: 'Authentication Error',
                 description: 'You need to be logged in to add a comment.',
@@ -213,7 +218,7 @@ export const PostProvider = ({ children }) => {
             return
         }
 
-        if (content.length < 3) {
+        if (content?.length < 3) {
             toast({
                 title: 'Validation Error',
                 description: 'Comment is too short. It must be at least 3 characters.',
@@ -222,7 +227,7 @@ export const PostProvider = ({ children }) => {
             return
         }
 
-        if (content.length > 100) {
+        if (content?.length > 100) {
             toast({
                 title: 'Validation Error',
                 description: 'Comment is too long. It must be under 500 characters.',
@@ -236,13 +241,14 @@ export const PostProvider = ({ children }) => {
 
             const comment = {
                 commentId: generateShortUniqueId(),
-                commentor: userDetails.username,
+                commentor: user.username,
                 content: content.trim(),
                 timestamp: new Date().toISOString(),
             }
 
             const response = await fetch(ADD_COMMENT_URL, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, comment })
             })
@@ -279,6 +285,7 @@ export const PostProvider = ({ children }) => {
 
             const response = await fetch(DELETE_COMMENT_URL, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, commentId })
             })
@@ -308,14 +315,15 @@ export const PostProvider = ({ children }) => {
 
     const toggleLike = async (post_creator_username, postid) => {
         try {
-            if (!userDetails) return
+            if (!user) return
 
             setIsLikingPost(true)
 
             const response = await fetch(TOGGLE_LIKE_URL, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ whose_post: post_creator_username, postid, liker: userDetails.username })
+                body: JSON.stringify({ whose_post: post_creator_username, postid, liker: user.username })
             })
 
             const data = await response.json()
@@ -339,7 +347,7 @@ export const PostProvider = ({ children }) => {
 
     useEffect(() => {
         fetchPosts()
-    }, [])
+    }, [user])
 
     return (
         <PostContext.Provider

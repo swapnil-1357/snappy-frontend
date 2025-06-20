@@ -6,15 +6,17 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useUser } from '@/context/UserContext';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
+import { useAuth } from '@/context/AuthContext';
 
 
 
 
 const EditProfileModal = ({ isOpen, onClose }) => {
     const { editUser, userProfile, userAvatar } = useUser();
+    const { user } = useAuth()
 
-    const [name, setName] = useState(userProfile.name);
-    const [about, setAbout] = useState(userProfile.about);
+    const [name, setName] = useState(user.name);
+    const [about, setAbout] = useState(user.about);
     const [file, setFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(userAvatar);
 
@@ -27,12 +29,11 @@ const EditProfileModal = ({ isOpen, onClose }) => {
 
     const handleSave = async () => {
         try {
-            await editUser({ username: userProfile.username, name, about }, file);
+            await editUser({ username: user.username, name, about }, file);
             onClose();
         } catch (error) {
-            // // // console.log('handle save failed due to error: ', error)
+            // console.log('handle save failed due to error: ', error)
         }
-
     }
 
     return (
@@ -55,7 +56,7 @@ const EditProfileModal = ({ isOpen, onClose }) => {
                     <div className='flex items-center gap-4'>
                         <Avatar className='h-20 w-20'>
                             <AvatarImage src={previewUrl} alt='Profile Picture Preview' />
-                            <AvatarFallback>{userProfile.username ? userProfile.username[0] : 'U'}</AvatarFallback>
+                            <AvatarFallback>{user.username ? user.username[0] : 'U'}</AvatarFallback>
                         </Avatar>
                         <Input type='file' onChange={handleFileChange} />
                     </div>

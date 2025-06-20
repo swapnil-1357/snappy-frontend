@@ -22,7 +22,7 @@ export const UserProvider = ({ children }) => {
     const params = useParams()
     const param_username = params?.username
 
-    const { user } = useAuth()
+    const { user, setUser } = useAuth()
 
     const [userProfile, setUserProfile] = useState({})
     const [userAvatar, setUserAvatar] = useState('')
@@ -38,7 +38,10 @@ export const UserProvider = ({ children }) => {
             setIsLoadingUser(true)
 
             const url = `${import.meta.env.VITE_USER_URL}/get-user-by-username?username=${username}`
-            const res = await fetch(url)
+            const res = await fetch(url, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await res.json()
             // // console.log('user profile user context called: ', data)
 
@@ -53,7 +56,6 @@ export const UserProvider = ({ children }) => {
                     isVerified: userdata.isVerified,
                     user_avatar: userdata.avatar
                 })
-                // // console.log('this is userdata: ', userProfile)
             } else {
                 toast({
                     title: 'Not Found',
@@ -62,8 +64,6 @@ export const UserProvider = ({ children }) => {
                 })
                 navigate('/posts')
             }
-
-            // // // console.log('this is userdata: ', userProfile)
 
         } catch (error) {
             // // // // console.error('Error fetching user profile:', error)
@@ -79,7 +79,10 @@ export const UserProvider = ({ children }) => {
 
             setIsLoadingUser(true)
             const url = `${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${email}`
-            const res = await fetch(url)
+            const res = await fetch(url, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await res.json()
 
             if (data.success) {
@@ -102,8 +105,6 @@ export const UserProvider = ({ children }) => {
                 })
                 navigate('/posts')
             }
-
-            // console.log('this is userdata from email: ', userProfile)
 
         } catch (error) {
             navigate('/')
@@ -178,7 +179,10 @@ export const UserProvider = ({ children }) => {
             // // console.log('fetch image function called')
             const GET_AVATAR_URL = `${import.meta.env.VITE_USER_URL}/get-avatar`
             const GET_AVATAR_URL_USERNAME = GET_AVATAR_URL + `?username=${username}`
-            const response = await fetch(GET_AVATAR_URL_USERNAME)
+            const response = await fetch(GET_AVATAR_URL_USERNAME, {
+                method: 'GET',
+                credentials: 'include',
+            })
             const data = await response.json()
 
             // // // console.log('here is the avatar new url: ', data)
@@ -231,6 +235,7 @@ export const UserProvider = ({ children }) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     username: updatedUserInfo.username,
                     name: updatedUserInfo.name,
@@ -248,10 +253,18 @@ export const UserProvider = ({ children }) => {
                     about: updatedUserInfo.about,
                     user_avatar: updatedUserInfo.avatar
                 })
+                setUser({
+                    name: updatedUserInfo.name,
+                    username: updatedUserInfo.username,
+                    about: updatedUserInfo.about,
+                    user_avatar: updatedUserInfo.avatar
+                })
                 toast({
                     title: 'Profile Updated',
                     description: 'Your profile has been successfully updated.',
                 })
+
+
             } else {
                 toast({
                     title: 'Error',
@@ -286,6 +299,7 @@ export const UserProvider = ({ children }) => {
     useEffect(() => {
         if (user && user.email) {
             fetchUserByEmail(user.email)
+            // setUserProfile(user)
         }
     }, [user])
 

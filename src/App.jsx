@@ -18,10 +18,10 @@ import { Analytics } from "@vercel/analytics/react"
 const AppRoutes = () => {
   const { isAuthLoading, user } = useAuth()
 
-  // Wait until authentication is done
-  if (isAuthLoading) {
-    return <Loader />
-  }
+  // // Wait until authentication is done
+  // if (isAuthLoading) {
+  //   return <Loader />
+  // }
 
   return (
     <Routes>
@@ -51,9 +51,9 @@ const AppRoutes = () => {
       <Route
         path='/posts'
         element={
-          <ProtectedRoute>
+          // <ProtectedRoute>
             <Posts />
-          </ProtectedRoute>
+          /* </ProtectedRoute> */
         }
       />
 
@@ -61,9 +61,9 @@ const AppRoutes = () => {
       <Route
         path='/u/:param_username'
         element={
-          <ProtectedRoute>
+          // <ProtectedRoute>
             <User />
-          </ProtectedRoute>
+          // </ProtectedRoute>
         }
       />
 
@@ -92,3 +92,5 @@ const App = () => {
 }
 
 export default App
+
+
