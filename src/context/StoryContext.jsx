@@ -1,12 +1,11 @@
 import { useToast } from "@/components/ui/use-toast"
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { generateShortUniqueId } from "@/helpers/unique-id"
 import { storage } from "@/firebaseConfig"
 import axios from "axios"
+import CryptoJS from "crypto-js"
 
-
-// fetches all stories (not particular user's story)
 const GET_STORIES_URL = `${import.meta.env.VITE_STORY_URL}/get-stories`
 const POST_STORIES_URL = `${import.meta.env.VITE_STORY_URL}/post-story`
 const DELETE_STORY_URL = `${import.meta.env.VITE_STORY_URL}/delete-story`
@@ -16,11 +15,9 @@ const VITE_CLOUD_API_KEY = import.meta.env.VITE_CLOUD_API_KEY
 const VITE_CLOUD_API_SECRET = import.meta.env.VITE_CLOUD_API_SECRET
 const VITE_CLOUD_PRESET = import.meta.env.VITE_CLOUD_PRESET
 
-
 const StoryContext = createContext()
 
 export const StoryProvider = ({ children }) => {
-
     const { toast } = useToast()
 
     const [isStoryAdding, setIsStoryAdding] = useState(false)
@@ -28,35 +25,35 @@ export const StoryProvider = ({ children }) => {
     const [isLoadingStories, setIsLoadingStories] = useState(false)
     const [stories, setStories] = useState([])
 
-    // Upload Image
-    const uploadImage = async (file, username, storyid) => {
+    // Upload Image to Cloudinary (unsigned, using preset)
+    const uploadImage = useCallback(async (file, username, storyid) => {
         try {
             const formData = new FormData()
             formData.append('file', file)
             formData.append('upload_preset', VITE_CLOUD_PRESET)
             formData.append('folder', `snappy/stories/${username}`)
-            formData.append('public_id', storyid)
+            formData.append('public_id', storyid) // unique per story
 
-
-            // // console.log('this is cloudinary call')
             const response = await axios.post(
                 `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/image/upload`,
                 formData
             )
 
-            // // console.log('this is cloudinary url: ', response.data.secure_url)
             return response.data.secure_url
-
         } catch (error) {
-            // // // console.error('Error uploading image to Cloudinary:', error)
+            toast({
+                title: 'Error',
+                description: 'Failed to upload story image.',
+                variant: 'destructive',
+            })
             throw new Error('Image upload failed')
         }
-    }
+    }, [])
 
-    // Delete Image
-    const deleteImage = async (username, storyid) => {
+    // Delete Image from Cloudinary (signed)
+    const deleteImage = useCallback(async (username, storyid) => {
         try {
-            const public_id = `snappy/${username}/stories/${storyid}`
+            const public_id = `snappy/stories/${username}/${storyid}`
             const timestamp = Math.round(new Date().getTime() / 1000)
             const signatureString = `public_id=${public_id}&timestamp=${timestamp}${VITE_CLOUD_API_SECRET}`
             const signature = CryptoJS.SHA1(signatureString).toString()
@@ -72,51 +69,40 @@ export const StoryProvider = ({ children }) => {
                 formData
             )
 
-            if (response.data.result === 'ok') {
-                // // // console.log(`Image ${public_id} deleted successfully`)
-                return true
-            } else {
-                // // // console.error(`Failed to delete image ${public_id}:`, response.data)
-                return false
-            }
+            return response.data.result === 'ok'
         } catch (error) {
-            // // // console.error('Error deleting image from Cloudinary:', error)
+            toast({
+                title: 'Error',
+                description: 'Failed to delete story image.',
+                variant: 'destructive',
+            })
             throw new Error('Image deletion failed')
         }
-    }
+    }, [])
 
-    // Fetch Image
-    const fetchImage = (username, storyid) => {
-        try {
-            const url = `https://res.cloudinary.com/${VITE_CLOUD_NAME}/image/upload/v1/snappy/${username}/stories/${storyid}`
-            return url
-        } catch (error) {
-            // // // console.error('Error fetching image from Cloudinary:', error)
-            throw new Error('Image fetch failed')
-        }
-    }
-
-
-    // Fetch Stories
-    const fetchStories = async (username) => {
+    // Fetch Stories from backend
+    const fetchStories = useCallback(async () => {
         setIsLoadingStories(true)
         try {
             const response = await fetch(GET_STORIES_URL)
             const data = await response.json()
-
             if (data.success) {
                 setStories(data.stories)
-            } else {
             }
         } catch (error) {
-            // throw new Error('Error fetching stories')
-        } finally{
+            toast({
+                title: 'Error',
+                description: 'Failed to fetch stories.',
+                variant: 'destructive',
+            })
+        } finally {
             setIsLoadingStories(false)
         }
-    }
+    }, [])
 
     // Add Story
-    const addStory = async (username, file) => {
+    const addStory = useCallback(async (username, file) => {
+        setIsStoryAdding(true)
         try {
             let storyid = generateShortUniqueId()
             const imageUrl = await uploadImage(file, username, storyid)
@@ -131,19 +117,28 @@ export const StoryProvider = ({ children }) => {
             const data = await response.json()
             if (data.success) {
                 await fetchStories()
+                toast({
+                    title: 'Story Added',
+                    description: 'Your story was added successfully.',
+                })
             } else {
                 throw new Error('Failed to add story')
             }
         } catch (error) {
-            // // // console.error('Error adding story:', error)
+            toast({
+                title: 'Error',
+                description: 'Error adding story.',
+                variant: 'destructive',
+            })
             throw new Error('Error adding story')
-        } finally{
-            
+        } finally {
+            setIsStoryAdding(false)
         }
-    }
+    }, [uploadImage, fetchStories])
 
     // Delete Story
-    const deleteStory = async (username, storyid) => {
+    const deleteStory = useCallback(async (username, storyid) => {
+        setIsStoryDeleting(true)
         try {
             await deleteImage(username, storyid)
 
@@ -155,22 +150,39 @@ export const StoryProvider = ({ children }) => {
 
             const data = await response.json()
             if (data.success) {
-                // // // console.log('Story deleted successfully')
+                await fetchStories()
+                toast({
+                    title: 'Story Deleted',
+                    description: 'Your story was deleted successfully.',
+                })
             } else {
                 throw new Error('Failed to delete story')
             }
         } catch (error) {
-            // // // console.error('Error deleting story:', error)
+            toast({
+                title: 'Error',
+                description: 'Error deleting story.',
+                variant: 'destructive',
+            })
             throw new Error('Error deleting story')
+        } finally {
+            setIsStoryDeleting(false)
         }
-    }
+    }, [deleteImage, fetchStories])
 
     useEffect(() => {
         fetchStories()
-    }, [])
+    }, [fetchStories])
 
     return (
-        <StoryContext.Provider value={{ addStory, deleteStory, isStoryAdding, isStoryDeleting, isLoadingStories, stories }}>
+        <StoryContext.Provider value={{
+            addStory,
+            deleteStory,
+            isStoryAdding,
+            isStoryDeleting,
+            isLoadingStories,
+            stories
+        }}>
             {children}
         </StoryContext.Provider>
     )

@@ -77,15 +77,15 @@ const App = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <UserProvider>
-          <PostProvider>
+        <PostProvider>
+          <UserProvider>
             <StoryProvider>
               <AppRoutes />
               <Footer />
-              <Analytics/>
+              <Analytics />
             </StoryProvider>
-          </PostProvider>
-        </UserProvider>
+          </UserProvider>
+        </PostProvider>
       </AuthProvider>
     </BrowserRouter>
   )

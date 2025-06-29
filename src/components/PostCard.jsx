@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Heart, Send, Trash2 } from 'lucide-react'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Card, CardHeader, CardContent, CardDescription } from '@/components/ui/card'
 import { usePost } from '@/context/PostContext'
 import DeletePostModal from './DeletePostModal'
@@ -8,77 +7,42 @@ import AddCommentModal from './AddCommentModal'
 import { useAuth } from '@/context/AuthContext'
 import { timeAgo } from '@/helpers/time-ago'
 import ShareModal from './ShareModal'
-import { useUser } from '@/context/UserContext'
-import { Skeleton } from './ui/skeleton'
 import AddLikeModal from './AddLikeModal'
 import { Link } from 'react-router-dom'
-
-
-const GET_AVATAR_URL = `${import.meta.env.VITE_USER_URL}/get-avatar`
-
+import { Skeleton } from './ui/skeleton'
+import UserAvatar from './UserAvatar' // <-- Use the global avatar component
 
 const PostCard = ({ post }) => {
-
     const { user, userDetails } = useAuth()
     const { deletePost, toggleLike } = usePost()
     const [isModalOpen, setModalOpen] = useState(false)
     const [isShareModalOpen, setShareModalOpen] = useState(false)
-    const [avatarURL, setAvatarURL] = useState(null)
     const [imageLoading, setImageLoading] = useState(true)
     const [isLikeModalOpen, setIsLikeModalOpen] = useState(false)
 
-
-    const fetchImage = async (username) => {
-        try {
-            const GET_AVATAR_URL_USERNAME = GET_AVATAR_URL + `?username=${username}`
-            const response = await fetch(GET_AVATAR_URL_USERNAME)
-            const data = await response.json()
-
-            if (data.success) {
-                setAvatarURL(data.avatar)
-            }
-        } catch (error) {
-
-        }
-    }
-
-    useEffect(() => {
-        fetchImage(post.username)
-    }, [post.username])
-
     const liked = post.likes.includes(userDetails?.username);
 
-
-    const handleDeleteClick = () => {
-        setModalOpen(true)
-    }
-
+    const handleDeleteClick = () => setModalOpen(true)
     const handleConfirmDelete = async () => {
         deletePost(post.username, post.postid)
         setModalOpen(false)
     }
-
     const handleLikeClick = async () => {
         await toggleLike(post.username, post.postid)
     }
-
-    const handleShareClick = () => {
-        setShareModalOpen(true)
-    }
-
-    const handleImageLoad = () => {
-        setImageLoading(false)
-    }
+    const handleShareClick = () => setShareModalOpen(true)
+    const handleImageLoad = () => setImageLoading(false)
 
     return (
         <div>
             <Card className="w-[380px]">
                 <CardHeader className='flex flex-row justify-between'>
                     <div className='flex gap-3 items-center'>
-                        <Avatar className='h-10 w-10'>
-                            <AvatarImage src={avatarURL} alt={post.username} />
-                            <AvatarFallback>{post.username[0]}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                            username={post.username}
+                            fallback={post.username[0]}
+                            className='h-10 w-10'
+                        />
                         <div className='flex flex-col'>
                             <div className='text-lg font-bold'>{post.name}</div>
                             <Link to={`/u/${post.username}`} className='text-xs text-blue-400 mt-[-4px] underline w-fit'>

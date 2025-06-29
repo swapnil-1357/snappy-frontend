@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage"
 import { useToast } from "@/components/ui/use-toast"
 import { storage } from "@/firebaseConfig"
@@ -7,8 +7,6 @@ import { generateShortUniqueId } from "@/helpers/unique-id"
 import { useAuth } from "./AuthContext"
 import axios from "axios"
 import CryptoJS from "crypto-js"
-
-
 
 const GET_POSTS_URL = `${import.meta.env.VITE_POST_URL}/get-posts`
 const ADD_POST_URL = `${import.meta.env.VITE_POST_URL}/add-post`
@@ -22,12 +20,16 @@ const VITE_CLOUD_API_KEY = import.meta.env.VITE_CLOUD_API_KEY
 const VITE_CLOUD_API_SECRET = import.meta.env.VITE_CLOUD_API_SECRET
 const VITE_CLOUD_PRESET = import.meta.env.VITE_CLOUD_PRESET
 
-
 const PostContext = createContext()
+
+const CACHE_DURATION = 300000 // 30 seconds
+
+// Global cache and pending promise map for posts
+const postsCache = { data: null, timestamp: 0 }
+const postsPromise = { current: null }
 
 export const PostProvider = ({ children }) => {
     const { toast } = useToast()
-
     const { userDetails } = useAuth()
 
     const [isPostAdding, setIsPostAdding] = useState(false)
@@ -38,9 +40,8 @@ export const PostProvider = ({ children }) => {
     const [isLikingPost, setIsLikingPost] = useState(false)
     const [posts, setPosts] = useState([])
 
-
     // cloudinary image crud
-    const uploadImage = async (file, username, postid) => {
+    const uploadImage = useCallback(async (file, username, postid) => {
         try {
             const formData = new FormData()
             formData.append('file', file)
@@ -60,9 +61,9 @@ export const PostProvider = ({ children }) => {
             // // // console.error('Error uploading image to Cloudinary:', error)
             throw new Error('Image upload failed')
         }
-    }
+    }, [])
 
-    const deleteImage = async (username, postid) => {
+    const deleteImage = useCallback(async (username, postid) => {
         try {
             const timestamp = Math.round(new Date().getTime() / 1000)
 
@@ -98,52 +99,65 @@ export const PostProvider = ({ children }) => {
             // console.error('Error deleting image from Cloudinary:', error)
             throw new Error('Image deletion failed')
         }
-    }
+    }, [])
 
-    const fetchPosts = async () => {
-        try {
-            setIsLoadingPosts(true)
+    const fetchPosts = useCallback(async (force = false) => {
+        setIsLoadingPosts(true)
+        const now = Date.now()
 
+        // Use cache if not forced and cache is recent
+        if (!force && postsCache.data && now - postsCache.timestamp < CACHE_DURATION) {
+            setPosts(postsCache.data)
+            setIsLoadingPosts(false)
+            return
+        }
+
+        // If a fetch is already in progress, wait for it
+        if (postsPromise.current) {
+            const data = await postsPromise.current
+            setPosts(data)
+            setIsLoadingPosts(false)
+            return
+        }
+
+        // Otherwise, fetch and cache
+        postsPromise.current = (async () => {
             const response = await fetch(GET_POSTS_URL)
             const data = await response.json()
-
             if (data.success) {
+                postsCache.data = data.posts
+                postsCache.timestamp = Date.now()
                 setPosts(data.posts)
+                return data.posts
             }
+            return []
+        })()
 
-        } catch (error) {
+        await postsPromise.current
+        postsPromise.current = null
+        setIsLoadingPosts(false)
+    }, [])
 
-        } finally {
-            setIsLoadingPosts(false)
-        }
-    }
-
-    const addPost = async (username, file, caption) => {
+    const addPost = useCallback(async (username, file, caption) => {
         try {
             setIsPostAdding(true)
-
             const postid = generateShortUniqueId()
             const timestamp = new Date().toISOString()
-
             const imageUrl = await uploadImage(file, username, postid)
-
             const response = await fetch(ADD_POST_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, postid, imageUrl, caption, timestamp })
             })
-
             const data = await response.json()
-
             if (data.success) {
                 toast({
                     title: 'Success',
                     description: 'Post added successfully!',
                     variant: 'default',
                 })
-                await fetchPosts()
+                await fetchPosts(true) // Force fresh fetch
             }
-
         } catch (error) {
             toast({
                 title: 'Error',
@@ -153,34 +167,25 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsPostAdding(false)
         }
-    }
+    }, [uploadImage, toast, fetchPosts])
 
-    const deletePost = async (username, postid) => {
+    const deletePost = useCallback(async (username, postid) => {
         try {
             setIsPostDeleting(true)
-            // console.log('this is deleting post: ', username, postid)
             await deleteImage(username, postid)
-
-            // console.log('this is delete post url: ', DELETE_POST_URL)
             const response = await fetch(DELETE_POST_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, postid })
             })
-
-            // console.log('this is the response: ', response)
-
             const data = await response.json()
-
-            // console.log('this is the data: ', data)
-
             if (data.success) {
                 toast({
                     title: 'Success',
                     description: 'Post deleted successfully!',
                     variant: 'default',
                 })
-                await fetchPosts()
+                await fetchPosts(true) // Force fresh fetch
             }
         } catch (error) {
             console.log('this is error: ', error)
@@ -192,9 +197,9 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsPostDeleting(false)
         }
-    }
+    }, [deleteImage, toast, fetchPosts])
 
-    const addComment = async (postid, post_creator_username, content) => {
+    const addComment = useCallback(async (postid, post_creator_username, content) => {
         if (!userDetails || !userDetails.username) {
             toast({
                 title: 'Authentication Error',
@@ -233,34 +238,28 @@ export const PostProvider = ({ children }) => {
 
         try {
             setIsAddingComment(true)
-
             const comment = {
                 commentId: generateShortUniqueId(),
                 commentor: userDetails.username,
                 content: content.trim(),
                 timestamp: new Date().toISOString(),
             }
-
             const response = await fetch(ADD_COMMENT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, comment })
             })
-
             const data = await response.json()
-
             if (response.ok && data.success) {
                 toast({
                     title: 'Success',
                     description: 'Comment added successfully!',
                     variant: 'default',
                 })
-
-                await fetchPosts()
+                await fetchPosts(true) // Force fresh fetch
             } else {
                 throw new Error(data.message || 'Failed to add comment.')
             }
-
         } catch (error) {
             toast({
                 title: 'Error',
@@ -270,32 +269,26 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsAddingComment(false)
         }
-    }
+    }, [userDetails, toast, fetchPosts])
 
-    const deleteComment = async (post_creator_username, postid, commentId) => {
+    const deleteComment = useCallback(async (post_creator_username, postid, commentId) => {
         try {
-            // // // console.log(post_creator_username, postid, commentId)
             setIsDeletingComment(true)
-
             const response = await fetch(DELETE_COMMENT_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, commentId })
             })
-
             const data = await response.json()
-
             if (data.success) {
                 toast({
                     title: 'Success',
                     description: 'Comment deleted successfully!',
                     variant: 'default',
                 })
-                await fetchPosts()
+                await fetchPosts(true) // Force fresh fetch
             }
-
         } catch (error) {
-            // // // console.log(error)
             toast({
                 title: 'Error',
                 description: 'Something went wrong while deleting the comment',
@@ -304,29 +297,22 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsDeletingComment(false)
         }
-    }
+    }, [toast, fetchPosts])
 
-    const toggleLike = async (post_creator_username, postid) => {
+    const toggleLike = useCallback(async (post_creator_username, postid) => {
         try {
             if (!userDetails) return
-
             setIsLikingPost(true)
-
             const response = await fetch(TOGGLE_LIKE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, liker: userDetails.username })
             })
-
             const data = await response.json()
-
             if (data.success) {
-                await fetchPosts()
+                await fetchPosts(true) // Force fresh fetch
             }
-
         } catch (error) {
-            // // // console.log(error)
-
             toast({
                 title: 'Error',
                 description: 'Something went wrong while liking the post',
@@ -335,11 +321,11 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsLikingPost(false)
         }
-    }
+    }, [userDetails, toast, fetchPosts])
 
     useEffect(() => {
         fetchPosts()
-    }, [])
+    }, [fetchPosts])
 
     return (
         <PostContext.Provider
@@ -356,7 +342,8 @@ export const PostProvider = ({ children }) => {
                 addPost,
                 deletePost,
                 isPostAdding,
-                isPostDeleting
+                isPostDeleting,
+                setPosts, // <-- add this
             }}>
             {children}
         </PostContext.Provider>

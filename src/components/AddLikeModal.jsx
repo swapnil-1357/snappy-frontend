@@ -1,15 +1,11 @@
 'use client'
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { useUser } from '@/context/UserContext'
-import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
-import LikeCard from './LikeCard'
 import { Button } from './ui/button'
+import UserAvatar from './UserAvatar' // <-- import your reusable avatar component
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 
 const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
-    const { getAvatar } = useUser()
-
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-[400px] py-10">
@@ -26,7 +22,10 @@ const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
                 <div className="flex flex-col gap-4">
                     {likes.length > 0 ? (
                         likes.map((username, index) => (
-                            <LikeCard key={index} liker={username} />
+                            <div key={index} className="flex items-center gap-3">
+                                <UserAvatar username={username} fallback={username[0]} className="h-8 w-8" />
+                                <span>@{username}</span>
+                            </div>
                         ))
                     ) : (
                         <div className="text-gray-500 text-center">No likes yet.</div>

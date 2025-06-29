@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { getDownloadURL, listAll, ref, uploadBytes } from 'firebase/storage'
 import { storage } from '@/firebaseConfig'
 import { toast } from '@/components/ui/use-toast'
@@ -7,6 +7,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import axios from 'axios'
 import { generateShortUniqueId } from '@/helpers/unique-id'
+import CryptoJS from 'crypto-js'
+import { usePost } from './PostContext'
 
 
 const VITE_CLOUD_NAME = import.meta.env.VITE_CLOUD_NAME
@@ -17,6 +19,13 @@ const VITE_CLOUD_PRESET = import.meta.env.VITE_CLOUD_PRESET
 
 const UserContext = createContext()
 
+// Global avatar cache and pending promise map
+const avatarCache = {}
+const avatarPromiseMap = {}
+
+// Global user profile cache and pending promise map
+const userProfileCache = {}
+const userProfilePromiseMap = {}
 
 export const UserProvider = ({ children }) => {
     const params = useParams()
@@ -30,89 +39,132 @@ export const UserProvider = ({ children }) => {
     const [isAvatarLoading, setIsAvatarLoading] = useState(false)
 
     const navigate = useNavigate()
+    const { posts, setPosts, fetchPosts } = usePost()
 
-    const fetchUserProfile = async (username) => {
+    // Optimized fetchUserProfile with cache and deduplication
+    const fetchUserProfile = useCallback(async (username, force = false) => {
         try {
             if (!username) return
 
             setIsLoadingUser(true)
 
-            const url = `${import.meta.env.VITE_USER_URL}/get-user-by-username?username=${username}`
-            const res = await fetch(url)
-            const data = await res.json()
-            // // console.log('user profile user context called: ', data)
-
-            if (data.success) {
-                const userdata = data.user
-                setUserProfile({
-                    name: userdata.name,
-                    username: userdata.username,
-                    about: userdata.about || '',
-                    email: userdata.email,
-                    posts: userdata.posts || [],
-                    isVerified: userdata.isVerified,
-                    user_avatar: userdata.avatar
-                })
-                // // console.log('this is userdata: ', userProfile)
-            } else {
-                toast({
-                    title: 'Not Found',
-                    description: 'No such user exists',
-                    variant: 'destructive',
-                })
-                navigate('/posts')
+            // Use cache if not forced and cache exists
+            if (!force && userProfileCache[username]) {
+                setUserProfile(userProfileCache[username])
+                setIsLoadingUser(false)
+                return
             }
 
-            // // // console.log('this is userdata: ', userProfile)
+            // If a fetch is already in progress, wait for it
+            if (userProfilePromiseMap[username]) {
+                const cached = await userProfilePromiseMap[username]
+                setUserProfile(cached)
+                setIsLoadingUser(false)
+                return
+            }
+
+            // Otherwise, fetch and cache
+            userProfilePromiseMap[username] = (async () => {
+                const url = `${import.meta.env.VITE_USER_URL}/get-user-by-username?username=${username}`
+                const res = await fetch(url)
+                const data = await res.json()
+                if (data.success) {
+                    const userdata = {
+                        name: data.user.name,
+                        username: data.user.username,
+                        about: data.user.about || '',
+                        email: data.user.email,
+                        posts: data.user.posts || [],
+                        isVerified: data.user.isVerified,
+                        user_avatar: data.user.avatar
+                    }
+                    userProfileCache[username] = userdata
+                    setUserProfile(userdata)
+                    return userdata
+                } else {
+                    toast({
+                        title: 'Not Found',
+                        description: 'No such user exists',
+                        variant: 'destructive',
+                    })
+                    navigate('/posts')
+                    return null
+                }
+            })()
+
+            await userProfilePromiseMap[username]
+            delete userProfilePromiseMap[username]
 
         } catch (error) {
-            // // // // console.error('Error fetching user profile:', error)
             navigate('/')
         } finally {
             setIsLoadingUser(false)
         }
-    }
+    }, [navigate])
 
-    const fetchUserByEmail = async (email) => {
+    // Optimized fetchUserByEmail with cache and deduplication
+    const fetchUserByEmail = useCallback(async (email, force = false) => {
         try {
             if (!email) return
 
             setIsLoadingUser(true)
-            const url = `${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${email}`
-            const res = await fetch(url)
-            const data = await res.json()
 
-            if (data.success) {
-                const userdata = data.user
-                setUserProfile({
-                    name: userdata.name,
-                    username: userdata.username,
-                    about: userdata.about || '',
-                    email: userdata.email,
-                    posts: userdata.posts || [],
-                    stories: userdata.stories || [],
-                    isVerified: userdata.isVerified,
-                    user_avatar: userdata.avatar
-                })
-            } else {
-                toast({
-                    title: 'Not Found',
-                    description: 'No such user exists',
-                    variant: 'destructive',
-                })
-                navigate('/posts')
+            // Use cache if not forced and cache exists
+            if (!force && userProfileCache[email]) {
+                setUserProfile(userProfileCache[email])
+                setIsLoadingUser(false)
+                return
             }
 
-            // console.log('this is userdata from email: ', userProfile)
+            // If a fetch is already in progress, wait for it
+            if (userProfilePromiseMap[email]) {
+                const cached = await userProfilePromiseMap[email]
+                setUserProfile(cached)
+                setIsLoadingUser(false)
+                return
+            }
+
+            // Otherwise, fetch and cache
+            userProfilePromiseMap[email] = (async () => {
+                const url = `${import.meta.env.VITE_USER_URL}/get-user-by-email?email=${email}`
+                const res = await fetch(url)
+                const data = await res.json()
+                if (data.success) {
+                    const userdata = {
+                        name: data.user.name,
+                        username: data.user.username,
+                        about: data.user.about || '',
+                        email: data.user.email,
+                        posts: data.user.posts || [],
+                        stories: data.user.stories || [],
+                        isVerified: data.user.isVerified,
+                        user_avatar: data.user.avatar
+                    }
+                    userProfileCache[email] = userdata
+                    setUserProfile(userdata)
+                    return userdata
+                } else {
+                    toast({
+                        title: 'Not Found',
+                        description: 'No such user exists',
+                        variant: 'destructive',
+                    })
+                    navigate('/posts')
+                    return null
+                }
+            })()
+
+            await userProfilePromiseMap[email]
+            delete userProfilePromiseMap[email]
 
         } catch (error) {
             navigate('/')
         } finally {
             setIsLoadingUser(false)
         }
-    }
+    }, [navigate])
 
-    const checkIfFileExists = async (username) => {
+    const checkIfFileExists = useCallback(async (username) => {
         try {
             if (!username) return false
 
@@ -123,18 +175,16 @@ export const UserProvider = ({ children }) => {
             // // // console.error('Error listing files:', error)
             return false
         }
-    }
+    }, [])
 
-    const uploadImage = async (file, public_id) => {
+    const uploadImage = useCallback(async (file, public_id) => {
         try {
-            const uuid = generateShortUniqueId()
             const formData = new FormData()
             formData.append('file', file)
             formData.append('upload_preset', VITE_CLOUD_PRESET)
             formData.append('folder', 'snappy')
             formData.append('cloud_name', VITE_CLOUD_NAME)
-            formData.append('public_id', uuid)
-            // formData.append('invalidate', 'true') // Invalidate cached versions
+            formData.append('public_id', `avatars/${public_id}`) // <-- always the same for each user
 
             const response = await axios.post(
                 `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/image/upload`,
@@ -144,22 +194,23 @@ export const UserProvider = ({ children }) => {
             return response.data.secure_url
 
         } catch (error) {
-            // // // console.error('Error uploading image to Cloudinary:', error)
+            // console.error('Error uploading image to Cloudinary:', error)
+            console.error('Error uploading image to Cloudinary:', error.response?.data || error.message)
             throw new Error('Image upload failed')
         }
-    }
+    }, [])
 
-    const deleteImage = async (public_id) => {
+    const deleteImage = useCallback(async (public_id) => {
         try {
             const timestamp = Math.round(new Date().getTime() / 1000)
-            const signatureString = `public_id=${public_id}&timestamp=${timestamp}${VITE_CLOUD_API_SECRET}` // Replace with your API Secret
-            const signature = CryptoJS.SHA1(signatureString).toString() // Generates the secure signature
+            const signatureString = `public_id=${public_id}&timestamp=${timestamp}${VITE_CLOUD_API_SECRET}`
+            const signature = CryptoJS.SHA1(signatureString).toString()
 
             const formData = new FormData()
             formData.append('public_id', public_id)
             formData.append('timestamp', timestamp)
             formData.append('signature', signature)
-            formData.append('api_key', VITE_CLOUD_API_KEY) // Replace with your Cloudinary API Key
+            formData.append('api_key', VITE_CLOUD_API_KEY)
 
             const response = await axios.post(
                 `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/image/destroy`,
@@ -171,44 +222,75 @@ export const UserProvider = ({ children }) => {
             // // // console.error('Error deleting image from Cloudinary:', error)
             throw new Error('Image deletion failed')
         }
-    }
+    }, [])
 
-    const fetchImage = async (username) => {
+    // Only fetch avatar if not cached or pending, and always resolve to a URL or null
+    const fetchImage = useCallback(async (username) => {
         try {
-            // // console.log('fetch image function called')
             const GET_AVATAR_URL = `${import.meta.env.VITE_USER_URL}/get-avatar`
             const GET_AVATAR_URL_USERNAME = GET_AVATAR_URL + `?username=${username}`
             const response = await fetch(GET_AVATAR_URL_USERNAME)
             const data = await response.json()
-
-            // // // console.log('here is the avatar new url: ', data)
-
             if (data.success) {
                 return data.avatar
             }
         } catch (error) {
             // // // console.error('Error fetching image from Cloudinary:', error)
-            // throw new Error('Image fetch failed')
         }
-    }
+        return null
+    }, [user])
 
-    const fetchUserAvatar = async (username) => {
+    // Optimized getAvatar with deduplication, cache, and cache-busting after edit
+    const getAvatar = useCallback(async (username) => {
+        if (!username) return null
+
+        // Use cache if available
+        if (avatarCache[username]) {
+            return avatarCache[username]
+        }
+
+        // If a fetch is already in progress, wait for it
+        if (avatarPromiseMap[username]) {
+            return await avatarPromiseMap[username]
+        }
+
+        // Always fetch with cache-busting to avoid stale images
+        avatarPromiseMap[username] = (async () => {
+            const GET_AVATAR_URL = `${import.meta.env.VITE_USER_URL}/get-avatar?username=${username}&t=${Date.now()}`
+            try {
+                const response = await fetch(GET_AVATAR_URL)
+                const data = await response.json()
+                if (data.success) {
+                    avatarCache[username] = data.avatar
+                    return data.avatar
+                }
+            } catch (error) {
+                // fallback or error handling
+            }
+            return null
+        })()
+
+        const url = await avatarPromiseMap[username]
+        delete avatarPromiseMap[username]
+        return url
+    }, [user])
+
+    // Use this in components to set the avatar state
+    const fetchUserAvatar = useCallback(async (username) => {
         try {
             if (!username) return
 
             setIsAvatarLoading(true)
-            const img_url = await fetchImage(username)
+            const img_url = await getAvatar(username)
             setUserAvatar(img_url)
-
         } catch (error) {
-            // // // console.error('Error fetching avatar:', error)
             setUserAvatar(null)
         } finally {
             setIsAvatarLoading(false)
         }
-    }
+    }, [getAvatar])
 
-    const editUser = async (updatedUserInfo, file) => {
+    const editUser = useCallback(async (updatedUserInfo, file, callback) => {
         try {
             setIsLoadingUser(true)
 
@@ -218,13 +300,9 @@ export const UserProvider = ({ children }) => {
                 const uploadURL = await uploadImage(file, updatedUserInfo.username)
                 avatarUrl = uploadURL
                 setUserAvatar(uploadURL)
-
-                // // // console.log('this is the new avatar:', uploadURL)
             }
 
             const url = `${import.meta.env.VITE_USER_URL}/edit-user`
-
-            // // // // console.log(url, 'calling this url for updating user')
 
             const res = await fetch(url, {
                 method: 'POST',
@@ -242,53 +320,73 @@ export const UserProvider = ({ children }) => {
             const response = await res.json()
 
             if (response.success) {
-                setUserProfile({
+                // Add cache busting to avatar URL
+                const cacheBustedAvatarUrl = avatarUrl + '?t=' + Date.now()
+                const updatedProfile = {
                     name: updatedUserInfo.name,
                     username: updatedUserInfo.username,
                     about: updatedUserInfo.about,
-                    user_avatar: updatedUserInfo.avatar
-                })
+                    email: updatedUserInfo.email,
+                    posts: updatedUserInfo.posts || [],
+                    isVerified: updatedUserInfo.isVerified,
+                    user_avatar: cacheBustedAvatarUrl
+                }
+                setUserProfile(updatedProfile)
+                userProfileCache[updatedUserInfo.username] = updatedProfile
+                if (updatedUserInfo.email) {
+                    userProfileCache[updatedUserInfo.email] = updatedProfile
+                }
+                // Update avatar cache
+                avatarCache[updatedUserInfo.username] = cacheBustedAvatarUrl
+                setUserAvatar(cacheBustedAvatarUrl)
+                // Update posts in frontend
+                if (posts && setPosts) {
+                    setPosts(posts.map(post =>
+                        post.username === updatedUserInfo.username
+                            ? { ...post, name: updatedUserInfo.name, user_avatar: cacheBustedAvatarUrl }
+                            : post
+                    ))
+                }
+                // Wait for the image to be available on the CDN/storage
+                setTimeout(async () => {
+                    if (fetchPosts) await fetchPosts(true)
+                }, 800) // 800ms delay, adjust as needed
                 toast({
                     title: 'Profile Updated',
                     description: 'Your profile has been successfully updated.',
                 })
+                if (typeof callback === 'function') {
+                    callback(null, updatedProfile)
+                }
             } else {
                 toast({
                     title: 'Error',
                     description: 'Failed to update your profile. Please try again.',
                     variant: 'destructive',
                 })
+                if (typeof callback === 'function') {
+                    callback(new Error('Failed to update your profile'))
+                }
             }
         } catch (error) {
-            // // // console.error('Error updating user profile:', error)
             toast({
                 title: 'Error',
                 description: 'An error occurred while updating your profile.',
                 variant: 'destructive',
             })
+            if (typeof callback === 'function') {
+                callback(error)
+            }
         } finally {
             setIsLoadingUser(false)
         }
-    }
-
-    const getAvatar = async (username) => {
-        try {
-            if (!username) return null
-
-            const url = fetchImage(username)
-            return url
-
-        } catch (error) {
-            return null
-        }
-    }
+    }, [userAvatar, uploadImage, fetchPosts, posts, setPosts])
 
     useEffect(() => {
         if (user && user.email) {
             fetchUserByEmail(user.email)
         }
-    }, [user])
-
+    }, [user, fetchUserByEmail])
 
     return (
         <UserContext.Provider
