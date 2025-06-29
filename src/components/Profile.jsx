@@ -24,8 +24,12 @@ const Profile = ({ posts, param_username }) => {
     useEffect(() => {
         setProfile(null)
         fetch(`/api/user/get-user-by-username?username=${param_username}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error('Profile not found')
+                return res.json()
+            })
             .then(data => setProfile(data.user))
+            .catch(() => setProfile(null))
     }, [param_username])
 
     useEffect(() => {
