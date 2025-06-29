@@ -194,8 +194,7 @@ export const UserProvider = ({ children }) => {
             return response.data.secure_url
 
         } catch (error) {
-            // console.error('Error uploading image to Cloudinary:', error)
-            console.error('Error uploading image to Cloudinary:', error.response?.data || error.message)
+            console.error('Error uploading image to Cloudinary:', error)
             throw new Error('Image upload failed')
         }
     }, [])
