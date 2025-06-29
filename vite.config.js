@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [
     react({
       tsDecorators: true,
-      sourcemap: 'hidden', // Disable sourcemaps for React plugin
+      sourcemap: 'hidden',
     }),
   ],
   build: {
-    sourcemap: 'hidden', // Disable sourcemaps for production build
+    sourcemap: 'hidden', 
   },
   resolve: {
     alias: {
@@ -19,7 +19,7 @@ export default defineConfig({
   },
   // server: {
   //   proxy: {
-  //     '/api': 'http://localhost:3000', // Proxy API requests to backend
+  //     '/api': 'http://localhost:3000',
   //   },
   // },
 })
