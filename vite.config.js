@@ -11,11 +11,15 @@ export default defineConfig({
   ],
   build: {
     sourcemap: 'hidden', // Disable sourcemaps for production build
-    
   },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3000', // Proxy API requests to backend
     },
   },
 })
