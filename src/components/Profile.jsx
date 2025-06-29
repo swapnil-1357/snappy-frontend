@@ -20,17 +20,19 @@ const Profile = ({ posts, param_username }) => {
     const [filteredPosts, setFilteredPosts] = useState([])
     const [profile, setProfile] = useState(null)
 
+    const API_BASE = import.meta.env.VITE_HOME_ROUTE || '';
+
     // Fetch the correct profile for the username in the URL
     useEffect(() => {
         setProfile(null)
-        fetch(`/api/user/get-user-by-username?username=${param_username}`)
+        fetch(`${API_BASE}/api/user/get-user-by-username?username=${param_username}`)
             .then(res => {
                 if (!res.ok) throw new Error('Profile not found')
                 return res.json()
             })
             .then(data => setProfile(data.user))
             .catch(() => setProfile(null))
-    }, [param_username])
+    }, [param_username, API_BASE])
 
     useEffect(() => {
         if (selectedPostType === 'Own Posts') {
