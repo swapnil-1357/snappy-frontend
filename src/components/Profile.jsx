@@ -28,6 +28,13 @@ const Profile = ({ userProfile, userAvatar, posts, param_username }) => {
         }
     }, [selectedPostType, posts, param_username])
 
+    // Make sure userProfile is the profile for param_username, not the logged-in user
+    // If you fetch userProfile, do it based on param_username
+    // Example:
+    // useEffect(() => {
+    //   fetchUserProfile(param_username)
+    // }, [param_username])
+
     return (
         <div className='flex md:flex-row flex-col gap-14'>
             <Card className='flex flex-col gap-5 p-5 justify-center items-center h-fit'>
