@@ -295,8 +295,15 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={{
-            user, userDetails, isAuthenticated, isEmailVerified,
-            signInUsingGoogle, logOut, signIn, signUp, isAuthLoading
+            user,
+            userDetails,
+            isAuthenticated, 
+            isEmailVerified,
+            signInUsingGoogle, 
+            logOut, 
+            signIn, 
+            signUp, 
+            isAuthLoading
         }}>
             {children}
             {showUsernameModal && (
