@@ -11,9 +11,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ToastProvider>
       <ThemeProvider>
-        <App />
-        <Analytics />
-        <Toaster />
+          <App />
+          <Analytics />
+          <Toaster /> 
       </ThemeProvider>
     </ToastProvider>
   </StrictMode>,

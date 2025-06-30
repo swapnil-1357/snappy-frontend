@@ -56,8 +56,13 @@ export default {
 					'4': 'hsl(var(--chart-4))',
 					'5': 'hsl(var(--chart-5))'
 				}
+			},
+			animation: {
+				'ping-slow': 'ping 1s cubic-bezier(0, 0, 0.2, 1)',
 			}
 		}
 	},
-	plugins: [],
+	plugins: [
+		// animatePlugin
+	],
 }
