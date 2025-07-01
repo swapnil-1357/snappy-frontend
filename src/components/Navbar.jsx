@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {React, useState } from 'react';
 import { SlSocialSkype } from "react-icons/sl";
 import { User, LayoutDashboard, Contact, Menu } from "lucide-react";
 import { Link } from 'react-router-dom';

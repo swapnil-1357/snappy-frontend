@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useCallback, useMemo } from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -15,96 +15,53 @@ import ConfirmDeleteModal from './ConfirmCommentDeleteModal'
 import { usePost } from '@/context/PostContext'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 import CommentCard from './CommentCard'
-import { useAuth } from '@/context/AuthContext'
 
 const AddCommentModal = ({ comments = [], whose_post, postid }) => {
     const { addComment, isAddingComment, deleteComment } = usePost()
-    const { userDetails } = useAuth()
 
     const [content, setContent] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [commentToDelete, setCommentToDelete] = useState(null)
 
-    const commentCount = useMemo(() => comments.length || 0, [comments])
+    if (!postid || !whose_post) return null // guard clause
 
-    const handleDeleteClick = useCallback((comment) => {
+    const handleDeleteClick = (comment) => {
         setCommentToDelete(comment)
         setIsModalOpen(true)
-    }, [])
+    }
 
-    const handleConfirmDelete = useCallback(() => {
+    const handleConfirmDelete = async () => {
         if (commentToDelete) {
             deleteComment(whose_post, postid, commentToDelete.commentId)
             setIsModalOpen(false)
             setCommentToDelete(null)
         }
-    }, [commentToDelete, deleteComment, whose_post, postid])
+    }
 
-    const handleInputChange = useCallback((e) => {
-        setContent(e.target.value)
-    }, [])
-
-    const onSubmit = useCallback(async () => {
+    const onSubmit = () => {
         const trimmed = content.trim()
         if (!trimmed) return
-
-        await addComment(postid, whose_post, trimmed)
+        addComment(postid, whose_post, trimmed)
         setContent('')
-
-        // send notification to post owner if not commenting on own post
-        if (whose_post !== userDetails.username) {
-            try {
-                await fetch(`${import.meta.env.VITE_HOME_ROUTE}/api/user/add-notification`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: whose_post,
-                        type: 'comment',
-                        sender: userDetails.username,
-                    }),
-                })
-            } catch (error) {
-                console.error('Failed to send comment notification:', error)
-            }
-        }
-    }, [content, addComment, postid, whose_post, userDetails.username])
-
-    const handleKeyDown = useCallback((e) => {
-        if (e.key === 'Enter') onSubmit()
-    }, [onSubmit])
-
-    const renderedComments = useMemo(() => {
-        if (comments.length === 0) {
-            return (
-                <div className="text-gray-500 text-center">
-                    No comments yet. Be the first to comment!
-                </div>
-            )
-        }
-        return comments.map((comment) => (
-            <CommentCard
-                key={comment.commentId}
-                comment={comment}
-                onDelete={handleDeleteClick}
-            />
-        ))
-    }, [comments, handleDeleteClick])
+    }
 
     return (
         <div>
-            <Dialog>
+            <Dialog className="p-3">
                 <DialogTrigger asChild>
                     <div className="flex items-center gap-1 cursor-pointer">
                         <MessageCircle />
-                        <div className="text-[1.1rem]">{commentCount}</div>
+                        <div className="text-[1.1rem]">{comments.length}</div>
                     </div>
                 </DialogTrigger>
-
                 <DialogContent
-                    className="sm:max-w-[425px]"
+                    className="max-w-[400px] py-10"
                     aria-describedby="comment-dialog-description"
                 >
                     <DialogHeader>
+                        <div className="text-lg font-semibold">
+                            Commenting on <span className="text-blue-600">@{whose_post}</span>'s post
+                        </div>
                         <VisuallyHidden.Root>
                             <DialogTitle>Comment on Post</DialogTitle>
                         </VisuallyHidden.Root>
@@ -115,13 +72,13 @@ const AddCommentModal = ({ comments = [], whose_post, postid }) => {
                         </VisuallyHidden.Root>
                     </DialogHeader>
 
-                    <Input
-                        value={content}
-                        placeholder="Comment"
-                        onChange={handleInputChange}
-                        onKeyDown={handleKeyDown}
-                    />
-
+                    <div className="w-full">
+                        <Input
+                            value={content}
+                            placeholder="Comment"
+                            onChange={(e) => setContent(e.target.value)}
+                        />
+                    </div>
                     <Button
                         disabled={isAddingComment || !content.trim()}
                         onClick={onSubmit}
@@ -131,11 +88,25 @@ const AddCommentModal = ({ comments = [], whose_post, postid }) => {
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Please Wait
                             </>
-                        ) : 'Add'}
+                        ) : (
+                            'Add'
+                        )}
                     </Button>
 
                     <div className="flex flex-col gap-4 pr-2 max-h-[300px] overflow-y-auto custom-scrollbar">
-                        {renderedComments}
+                        {comments.length > 0 ? (
+                            comments.map((comment, index) => (
+                                <CommentCard
+                                    key={index}
+                                    comment={comment}
+                                    onDelete={handleDeleteClick}
+                                />
+                            ))
+                        ) : (
+                            <div className="text-gray-500 text-center">
+                                No comments yet. Be the first to comment!
+                            </div>
+                        )}
                     </div>
 
                     {commentToDelete && (
