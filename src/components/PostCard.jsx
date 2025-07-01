@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useRef } from 'react'
 import { Heart, Send, Trash2 } from 'lucide-react'
 import { Card, CardHeader, CardContent, CardDescription } from '@/components/ui/card'
 import { usePost } from '@/context/PostContext'
@@ -7,31 +7,43 @@ import AddCommentModal from './AddCommentModal'
 import { useAuth } from '@/context/AuthContext'
 import { timeAgo } from '@/helpers/time-ago'
 import ShareModal from './ShareModal'
-import AddLikeModal from './AddLikeModal'
 import { Link } from 'react-router-dom'
 import { Skeleton } from './ui/skeleton'
-import UserAvatar from './UserAvatar' // <-- Use the global avatar component
+import UserAvatar from './UserAvatar'
+import LikeListModal from './LikeListModal'
 
 const PostCard = ({ post }) => {
     const { user, userDetails } = useAuth()
     const { deletePost, toggleLike } = usePost()
+
     const [isModalOpen, setModalOpen] = useState(false)
     const [isShareModalOpen, setShareModalOpen] = useState(false)
     const [imageLoading, setImageLoading] = useState(true)
     const [isLikeModalOpen, setIsLikeModalOpen] = useState(false)
+    const [showHeart, setShowHeart] = useState(false)
 
-    const liked = post.likes.includes(userDetails?.username);
+    const liked = post.likes.includes(userDetails?.username)
 
     const handleDeleteClick = () => setModalOpen(true)
+
     const handleConfirmDelete = async () => {
-        deletePost(post.username, post.postid)
+        await deletePost(post.username, post.postid)
         setModalOpen(false)
     }
+
     const handleLikeClick = async () => {
         await toggleLike(post.username, post.postid)
     }
-    const handleShareClick = () => setShareModalOpen(true)
-    const handleImageLoad = () => setImageLoading(false)
+
+    const handleDoubleClick = async () => {
+        if (!liked) {
+            setShowHeart(true)
+            await toggleLike(post.username, post.postid)
+            setTimeout(() => setShowHeart(false), 1000)
+        }
+    }
+
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(post.imageUrl)
 
     return (
         <div>
@@ -61,34 +73,64 @@ const PostCard = ({ post }) => {
                 </CardHeader>
 
                 <CardContent>
-                    <Card className="bg-white">
+                    <div
+                        className="relative"
+                        onDoubleClick={handleDoubleClick}
+                    >
                         {imageLoading && (
                             <Skeleton className='h-[330px] w-[330px] rounded-md' />
                         )}
-                        <img
-                            src={post.imageUrl}
-                            alt='Post Image'
-                            className='h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px]'
-                            onLoad={handleImageLoad}
-                        />
-                    </Card>
+
+{isVideo ? (
+                            <video
+                                controls
+                                preload="metadata"
+                                onLoadedData={() => setImageLoading(false)}
+                                className="h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px] object-cover"
+                            >
+                                <source src={post.imageUrl} type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        ) : (
+                            <img
+                                src={post.imageUrl}
+                                alt="Post"
+                                className="h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px]"
+                                onLoad={() => setImageLoading(false)}
+                            />
+                        )}
+
+                        {showHeart && (
+                            <Heart className="absolute inset-0 m-auto w-20 h-20 text-red-500 animate-ping-slow fill-red-500 pointer-events-none" />
+                        )}
+                    </div>
+
                     <div className='flex justify-between mt-3 items-center text-2xl'>
-                        <div className='flex items-center gap-4'>
-                            <div className='flex items-center gap-1 cursor-pointer' onClick={() => setIsLikeModalOpen(true)}>
-                                <Heart className={`transition-colors duration-300 ${liked ? 'fill-red-500' : ''}`} />
-                                <div className='text-[1.1rem]'>{post.likes && post.likes.length}</div>
+                        <div className='flex items-center gap-2'>
+                            <div className='flex items-center gap-1 cursor-pointer' onClick={handleLikeClick}>
+                                <Heart className={`transition-colors duration-300 ${liked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
                             </div>
-                            <div>
-                                <AddCommentModal comments={post.comments} postid={post.postid} whose_post={post.username} />
+                            <div
+                                className="text-[1.1rem] cursor-pointer hover:underline"
+                                onClick={() => setIsLikeModalOpen(true)}
+                            >
+                                {post.likes.length}
                             </div>
+                            <AddCommentModal
+                                comments={post.comments}
+                                postid={post.postid}
+                                whose_post={post.username}
+                            />
                         </div>
-                        <div className='cursor-pointer' onClick={handleShareClick}>
+                        <div className='cursor-pointer' onClick={() => setShareModalOpen(true)}>
                             <Send />
                         </div>
                     </div>
+
                     <div className='flex justify-end text-xs text-gray-400'>
                         {timeAgo(new Date(post.timestamp))}
                     </div>
+
                     <CardDescription className='text-black dark:text-white'>
                         {post.caption}
                     </CardDescription>
@@ -106,14 +148,13 @@ const PostCard = ({ post }) => {
             <ShareModal
                 isOpen={isShareModalOpen}
                 onClose={() => setShareModalOpen(false)}
-                url={`/post/${post.postid}`}
+                url={`${window.location.origin}/post/${post.postid}`}
             />
 
-            <AddLikeModal
+            <LikeListModal
                 isOpen={isLikeModalOpen}
                 onClose={() => setIsLikeModalOpen(false)}
                 likes={post.likes}
-                addLike={handleLikeClick}
             />
         </div>
     )

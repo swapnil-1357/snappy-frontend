@@ -46,22 +46,21 @@ export const PostProvider = ({ children }) => {
             const formData = new FormData()
             formData.append('file', file)
             formData.append('upload_preset', VITE_CLOUD_PRESET)
-            formData.append('folder', `snappy/posts/${username}`) // Store posts under the user's folder
+            formData.append('folder', `snappy/posts/${username}`)
             formData.append('cloud_name', VITE_CLOUD_NAME)
-            formData.append('public_id', postid) // Use postid as the filename for the post image
+            formData.append('public_id', postid)
 
-            const response = await axios.post(
-                `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/image/upload`,
-                formData
-            )
+            const isVideo = file.type.startsWith('video/')
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/${isVideo ? 'video' : 'image'}/upload`
+
+            const response = await axios.post(uploadUrl, formData)
 
             return response.data.secure_url
-
         } catch (error) {
-            // // // console.error('Error uploading image to Cloudinary:', error)
-            throw new Error('Image upload failed')
+            throw new Error('Media upload failed')
         }
     }, [])
+    
 
     const deleteImage = useCallback(async (username, postid) => {
         try {
@@ -230,7 +229,7 @@ export const PostProvider = ({ children }) => {
         if (content.length > 100) {
             toast({
                 title: 'Validation Error',
-                description: 'Comment is too long. It must be under 500 characters.',
+                description: 'Comment is too long. It must be under 100 characters.',
                 variant: 'destructive',
             })
             return
@@ -238,25 +237,40 @@ export const PostProvider = ({ children }) => {
 
         try {
             setIsAddingComment(true)
-            const comment = {
+
+            const newComment = {
                 commentId: generateShortUniqueId(),
                 commentor: userDetails.username,
                 content: content.trim(),
                 timestamp: new Date().toISOString(),
             }
+
             const response = await fetch(ADD_COMMENT_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ whose_post: post_creator_username, postid, comment })
+                body: JSON.stringify({ whose_post: post_creator_username, postid, comment: newComment })
             })
+
             const data = await response.json()
+
             if (response.ok && data.success) {
                 toast({
                     title: 'Success',
                     description: 'Comment added successfully!',
                     variant: 'default',
                 })
-                await fetchPosts(true) // Force fresh fetch
+
+                // ✅ update only the affected post's comments
+                setPosts(prev =>
+                    prev.map(post =>
+                        post.postid === postid
+                            ? {
+                                ...post,
+                                comments: [...post.comments, newComment],
+                            }
+                            : post
+                    )
+                )
             } else {
                 throw new Error(data.message || 'Failed to add comment.')
             }
@@ -269,26 +283,38 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsAddingComment(false)
         }
-    }, [userDetails, toast, fetchPosts])
+    }, [userDetails, toast, setPosts])
+
 
     const deleteComment = useCallback(async (post_creator_username, postid, commentId) => {
         try {
             setIsDeletingComment(true)
-            const response = await fetch(DELETE_COMMENT_URL, {
+            const res = await fetch(DELETE_COMMENT_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, commentId })
             })
-            const data = await response.json()
-            if (data.success) {
+            const { success } = await res.json()
+            if (success) {
                 toast({
                     title: 'Success',
                     description: 'Comment deleted successfully!',
                     variant: 'default',
                 })
-                await fetchPosts(true) // Force fresh fetch
+
+                // Update comments locally instead of refreshing all posts
+                setPosts(prev =>
+                    prev.map(post =>
+                        post.postid === postid
+                            ? {
+                                ...post,
+                                comments: post.comments.filter(c => c.commentId !== commentId)
+                            }
+                            : post
+                    )
+                )
             }
-        } catch (error) {
+        } catch (err) {
             toast({
                 title: 'Error',
                 description: 'Something went wrong while deleting the comment',
@@ -297,20 +323,34 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsDeletingComment(false)
         }
-    }, [toast, fetchPosts])
+    }, [toast, setPosts])
+
 
     const toggleLike = useCallback(async (post_creator_username, postid) => {
         try {
             if (!userDetails) return
             setIsLikingPost(true)
+
             const response = await fetch(TOGGLE_LIKE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ whose_post: post_creator_username, postid, liker: userDetails.username })
             })
             const data = await response.json()
+
             if (data.success) {
-                await fetchPosts(true) // Force fresh fetch
+                setPosts(prev =>
+                    prev.map(post =>
+                        post.postid === postid
+                            ? {
+                                ...post,
+                                likes: post.likes.includes(userDetails.username)
+                                    ? post.likes.filter(u => u !== userDetails.username)
+                                    : [...post.likes, userDetails.username],
+                            }
+                            : post
+                    )
+                )
             }
         } catch (error) {
             toast({
@@ -321,7 +361,8 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsLikingPost(false)
         }
-    }, [userDetails, toast, fetchPosts])
+    }, [userDetails, toast, setPosts])
+
 
     useEffect(() => {
         fetchPosts()
