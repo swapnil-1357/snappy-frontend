@@ -16,5 +16,5 @@ createRoot(document.getElementById('root')).render(
           <Toaster /> 
       </ThemeProvider>
     </ToastProvider>
-  </StrictMode>,
+  </StrictMode>
 )
