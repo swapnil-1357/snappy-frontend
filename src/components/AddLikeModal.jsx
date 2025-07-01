@@ -1,11 +1,10 @@
 'use client'
 import React from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from './ui/button'
-import UserAvatar from './UserAvatar' // <-- import your reusable avatar component
+import UserAvatar from './UserAvatar'
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden'
 
-const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
+const AddLikeModal = ({ isOpen, onClose, likes }) => {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-[400px] py-10">
@@ -14,10 +13,6 @@ const AddLikeModal = ({ isOpen, onClose, likes, addLike }) => {
                         <DialogTitle>People Who Liked This Post</DialogTitle>
                     </VisuallyHidden.Root>
                 </DialogHeader>
-
-                <Button onClick={addLike} className="w-full p-2 bg-red-500 text-white rounded">
-                    ❤️ Like
-                </Button>
 
                 <div className="flex flex-col gap-4">
                     {likes.length > 0 ? (
