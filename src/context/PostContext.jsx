@@ -263,8 +263,10 @@ export const PostProvider = ({ children }) => {
                 // ✅ update only the affected post's comments
                 setPosts(prev =>
                     prev.map(post =>
-                        post.postid === postid
-                            ? {
+
+
+                        post.postid === postid 
+             ? {
                                 ...post,
                                 comments: [...post.comments, newComment],
                             }
@@ -324,7 +326,6 @@ export const PostProvider = ({ children }) => {
             setIsDeletingComment(false)
         }
     }, [toast, setPosts])
-
 
     const toggleLike = useCallback(async (post_creator_username, postid) => {
         try {
