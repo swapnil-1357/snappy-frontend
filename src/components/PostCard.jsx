@@ -34,35 +34,6 @@ const PostCard = ({ post }) => {
     const handleLikeClick = async () => {
         await toggleLike(post.username, post.postid)
     }
-    const handleLike = async () => {
-        try {
-            const res = await fetch(`${VITE_HOME_ROUTE}/api/posts/toggle-like`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postid: post.postid, username: currentUsername })
-            });
-
-            const data = await res.json();
-
-            // If it's a new like, notify the post owner (avoid notifying on unlike)
-            if (data.liked && post.username !== currentUsername) {
-                await fetch(`${VITE_HOME_ROUTE}/api/user/add-notification`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: post.username,
-                        type: 'like',
-                        sender: currentUsername,
-                    }),
-                });
-            }
-
-            // update local state...
-        } catch (error) {
-            console.error('Error liking post:', error);
-        }
-    };
-      
 
     const handleDoubleClick = async () => {
         if (!liked) {
@@ -71,6 +42,8 @@ const PostCard = ({ post }) => {
             setTimeout(() => setShowHeart(false), 1000)
         }
     }
+
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(post.imageUrl)
 
     return (
         <div>
@@ -107,12 +80,26 @@ const PostCard = ({ post }) => {
                         {imageLoading && (
                             <Skeleton className='h-[330px] w-[330px] rounded-md' />
                         )}
-                        <img
-                            src={post.imageUrl}
-                            alt='Post'
-                            className='h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px]'
-                            onLoad={() => setImageLoading(false)}
-                        />
+
+{isVideo ? (
+                            <video
+                                controls
+                                preload="metadata"
+                                onLoadedData={() => setImageLoading(false)}
+                                className="h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px] object-cover"
+                            >
+                                <source src={post.imageUrl} type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        ) : (
+                            <img
+                                src={post.imageUrl}
+                                alt="Post"
+                                className="h-full w-full border-2 rounded-md max-h-[330px] max-w-[330px]"
+                                onLoad={() => setImageLoading(false)}
+                            />
+                        )}
+
                         {showHeart && (
                             <Heart className="absolute inset-0 m-auto w-20 h-20 text-red-500 animate-ping-slow fill-red-500 pointer-events-none" />
                         )}
@@ -163,6 +150,7 @@ const PostCard = ({ post }) => {
                 onClose={() => setShareModalOpen(false)}
                 url={`${window.location.origin}/post/${post.postid}`}
             />
+
             <LikeListModal
                 isOpen={isLikeModalOpen}
                 onClose={() => setIsLikeModalOpen(false)}

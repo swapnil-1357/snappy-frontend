@@ -46,22 +46,21 @@ export const PostProvider = ({ children }) => {
             const formData = new FormData()
             formData.append('file', file)
             formData.append('upload_preset', VITE_CLOUD_PRESET)
-            formData.append('folder', `snappy/posts/${username}`) // Store posts under the user's folder
+            formData.append('folder', `snappy/posts/${username}`)
             formData.append('cloud_name', VITE_CLOUD_NAME)
-            formData.append('public_id', postid) // Use postid as the filename for the post image
+            formData.append('public_id', postid)
 
-            const response = await axios.post(
-                `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/image/upload`,
-                formData
-            )
+            const isVideo = file.type.startsWith('video/')
+            const uploadUrl = `https://api.cloudinary.com/v1_1/${VITE_CLOUD_NAME}/${isVideo ? 'video' : 'image'}/upload`
+
+            const response = await axios.post(uploadUrl, formData)
 
             return response.data.secure_url
-
         } catch (error) {
-            // // // console.error('Error uploading image to Cloudinary:', error)
-            throw new Error('Image upload failed')
+            throw new Error('Media upload failed')
         }
     }, [])
+    
 
     const deleteImage = useCallback(async (username, postid) => {
         try {
@@ -264,8 +263,10 @@ export const PostProvider = ({ children }) => {
                 // ✅ update only the affected post's comments
                 setPosts(prev =>
                     prev.map(post =>
+
+
                         post.postid === postid 
-                            ? {
+             ? {
                                 ...post,
                                 comments: [...post.comments, newComment],
                             }
@@ -285,7 +286,7 @@ export const PostProvider = ({ children }) => {
             setIsAddingComment(false)
         }
     }, [userDetails, toast, setPosts])
-    
+
 
     const deleteComment = useCallback(async (post_creator_username, postid, commentId) => {
         try {
@@ -325,8 +326,7 @@ export const PostProvider = ({ children }) => {
             setIsDeletingComment(false)
         }
     }, [toast, setPosts])
-    
-    
+
     const toggleLike = useCallback(async (post_creator_username, postid) => {
         try {
             if (!userDetails) return
@@ -363,7 +363,7 @@ export const PostProvider = ({ children }) => {
             setIsLikingPost(false)
         }
     }, [userDetails, toast, setPosts])
-    
+
 
     useEffect(() => {
         fetchPosts()
