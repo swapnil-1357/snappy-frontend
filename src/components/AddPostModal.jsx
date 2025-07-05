@@ -9,12 +9,9 @@ import { Loader2, Plus, X } from 'lucide-react'
 import { usePost } from '@/context/PostContext'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
-
-
-
 const AddPostModal = () => {
     const [caption, setCaption] = useState('')
-    const [selectedImage, setSelectedImage] = useState(null)
+    const [selectedPreview, setSelectedPreview] = useState(null)
     const [file, setFile] = useState(null)
     const [open, setOpen] = useState(false)
     const [isPostAdding, setIsPostAdding] = useState(false)
@@ -29,31 +26,30 @@ const AddPostModal = () => {
         }
     }
 
-    const handleImageChange = (e) => {
+    const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-
             const selectedFile = e.target.files[0]
 
             if (selectedFile.size > 10 * 1024 * 1024) {
                 toast({
                     title: 'File Size Exceeded',
-                    description: 'File size exceeds 10MB. Please select a smaller image.',
+                    description: 'File size exceeds 10MB. Please select a smaller file.',
                     variant: 'destructive',
                 })
                 return
             }
 
-            setFile(e.target.files[0])
+            setFile(selectedFile)
             const reader = new FileReader()
             reader.onloadend = () => {
-                setSelectedImage(reader.result)
+                setSelectedPreview(reader.result)
             }
-            reader.readAsDataURL(e.target.files[0])
+            reader.readAsDataURL(selectedFile)
         }
     }
 
-    const removeImage = () => {
-        setSelectedImage(null)
+    const removePreview = () => {
+        setSelectedPreview(null)
         setFile(null)
         setCaption('')
     }
@@ -62,7 +58,7 @@ const AddPostModal = () => {
         if (!file || !userDetails) {
             toast({
                 title: 'Error',
-                description: 'Please select an image and ensure you are logged in',
+                description: 'Please select a file and ensure you are logged in',
                 variant: 'destructive',
             })
             setOpen(false)
@@ -72,7 +68,6 @@ const AddPostModal = () => {
         setIsPostAdding(true)
         try {
             const res = await addPost(userDetails.username, file, caption)
-            // console.log('this is the response of add post: ', res)
 
             toast({
                 title: 'Success',
@@ -80,11 +75,10 @@ const AddPostModal = () => {
                 variant: 'default',
             })
 
-            removeImage()
+            removePreview()
             setOpen(false)
 
         } catch (err) {
-            // // // // console.log(err)
             toast({
                 title: 'Error',
                 description: 'Failed to upload post',
@@ -102,9 +96,11 @@ const AddPostModal = () => {
     const handleOpenChange = (isOpen) => {
         setOpen(isOpen)
         if (!isOpen) {
-            removeImage()
+            removePreview()
         }
     }
+
+    const isVideo = file?.type?.startsWith('video')
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -120,37 +116,45 @@ const AddPostModal = () => {
                     <DialogTitle>Add Post</DialogTitle>
                     <DialogDescription>
                         <VisuallyHidden>Description for screen readers</VisuallyHidden>
-                        Add a caption and upload an image less than 10MB
+                        Add a caption and upload an image or video (max 10MB)
                     </DialogDescription>
                 </DialogHeader>
                 <div>
                     <label
-                        htmlFor="image-upload"
-                        className={`block w-full ${selectedImage ? 'h-[400px]' : 'h-48'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
+                        htmlFor="file-upload"
+                        className={`block w-full ${selectedPreview ? 'h-[400px]' : 'h-48'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
                     >
-                        {selectedImage ? (
+                        {selectedPreview ? (
                             <div className="relative w-full h-full">
-                                <img
-                                    src={selectedImage}
-                                    alt="Selected"
-                                    className="h-full w-full object-cover rounded"
-                                />
+                                {isVideo ? (
+                                    <video
+                                        src={selectedPreview}
+                                        controls
+                                        className="h-full w-full object-cover rounded"
+                                    />
+                                ) : (
+                                    <img
+                                        src={selectedPreview}
+                                        alt="Selected"
+                                        className="h-full w-full object-cover rounded"
+                                    />
+                                )}
                                 <button
                                     type="button"
-                                    onClick={removeImage}
+                                    onClick={removePreview}
                                     className="absolute top-2 right-2 bg-white rounded-full p-1 text-gray-500 hover:text-gray-800 hover:bg-gray-200"
                                 >
                                     <X />
                                 </button>
                             </div>
                         ) : (
-                            <div className="text-gray-500" onClick={handleIconClick}>Select Image</div>
+                            <div className="text-gray-500" onClick={handleIconClick}>Select File</div>
                         )}
                     </label>
                     <input
                         type="file"
-                        accept="image/*"
-                        onChange={handleImageChange}
+                        accept="image/*,video/*"
+                        onChange={handleFileChange}
                         ref={fileInputRef}
                         className="hidden"
                     />
