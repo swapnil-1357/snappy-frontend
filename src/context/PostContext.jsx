@@ -143,19 +143,38 @@ export const PostProvider = ({ children }) => {
             const postid = generateShortUniqueId()
             const timestamp = new Date().toISOString()
             const imageUrl = await uploadImage(file, username, postid)
+
+            const newPost = {
+                username: userDetails?.username || username,
+                postid,
+                imageUrl,
+                caption,
+                timestamp,
+                comments: [],
+                likes: [],
+                name: userDetails?.name || '',        
+                avatar: userDetails?.avatar || '',  
+            }
+
             const response = await fetch(ADD_POST_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, postid, imageUrl, caption, timestamp })
+                body: JSON.stringify(newPost)
             })
+
             const data = await response.json()
+
             if (data.success) {
                 toast({
                     title: 'Success',
                     description: 'Post added successfully!',
                     variant: 'default',
                 })
-                await fetchPosts(true) // Force fresh fetch
+
+                // ✅ Optimistically add new post to top of list
+                setPosts(prevPosts => [newPost, ...prevPosts])
+            } else {
+                throw new Error(data.message || 'Failed to add post')
             }
         } catch (error) {
             toast({
@@ -166,28 +185,37 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsPostAdding(false)
         }
-    }, [uploadImage, toast, fetchPosts])
-
+    }, [uploadImage, toast, setPosts, userDetails])
+    
+    
     const deletePost = useCallback(async (username, postid) => {
         try {
             setIsPostDeleting(true)
+
+            // First delete media from Cloudinary
             await deleteImage(username, postid)
+
             const response = await fetch(DELETE_POST_URL, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, postid })
             })
+
             const data = await response.json()
+
             if (data.success) {
                 toast({
                     title: 'Success',
                     description: 'Post deleted successfully!',
                     variant: 'default',
                 })
-                await fetchPosts(true) // Force fresh fetch
+
+                // ✅ Remove the deleted post locally
+                setPosts(prev => prev.filter(post => post.postid !== postid))
+            } else {
+                throw new Error(data.message || 'Failed to delete post')
             }
         } catch (error) {
-            console.log('this is error: ', error)
             toast({
                 title: 'Error',
                 description: 'Something went wrong while deleting the post',
@@ -196,7 +224,8 @@ export const PostProvider = ({ children }) => {
         } finally {
             setIsPostDeleting(false)
         }
-    }, [deleteImage, toast, fetchPosts])
+    }, [deleteImage, toast, setPosts])
+    
 
     const addComment = useCallback(async (postid, post_creator_username, content) => {
         if (!userDetails || !userDetails.username) {
