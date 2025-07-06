@@ -297,12 +297,12 @@ export const AuthProvider = ({ children }) => {
         <AuthContext.Provider value={{
             user,
             userDetails,
-            isAuthenticated,
+            isAuthenticated, 
             isEmailVerified,
-            signInUsingGoogle,
-            logOut,
-            signIn,
-            signUp,
+            signInUsingGoogle, 
+            logOut, 
+            signIn, 
+            signUp, 
             isAuthLoading
         }}>
             {children}

@@ -68,4 +68,6 @@ const CommentCard = ({ comment, onDelete }) => {
     )
 }
 
+
 export default React.memo(CommentCard)
+
