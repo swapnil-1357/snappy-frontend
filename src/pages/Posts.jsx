@@ -21,7 +21,8 @@ const Posts = () => {
         if (!debouncedSearch.trim()) {
             setFilteredPosts(posts)
         } else if (isReady) {
-            search(debouncedSearch).then(setFilteredPosts)
+            const results = search(debouncedSearch)
+            setFilteredPosts(results)
         }
     }, [debouncedSearch, posts, isReady])
 
@@ -43,7 +44,7 @@ const Posts = () => {
                         />
                         <AddPostModal />
                     </div>
-                    <div className='flex gap-5 flex-col justify-center items-center '>
+                    <div className='flex gap-5 flex-col justify-center items-center'>
                         {filteredPosts.length === 0 && <div>No posts found.</div>}
                         {filteredPosts.map((post) => (
                             <PostCard key={post.postid} post={post} />
