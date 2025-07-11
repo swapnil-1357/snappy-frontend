@@ -30,7 +30,7 @@ const Navbar = () => {
     const [unseenCount, setUnseenCount] = useState(0);
 
     const audioRef = useRef(null);
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     const fetchNotifications = async () => {
         if (!uid) return;
@@ -41,19 +41,16 @@ const Navbar = () => {
             const data = res.data;
             const unseen = data.filter(n => !n.seen);
 
-            if (unseen.length > unseenCount && notifications.length > 0) {
-                const latest = unseen.find(n => !notifications.some(p => p._id === n._id));
-                if (latest) {
-                    toast({ title: latest.message });
+            const latestUnseen = unseen.find(n => !notifications.some(p => p._id === n._id));
+            if (latestUnseen) {
+                toast({ title: latestUnseen.message });
 
-                    // 🔊 Sound and vibration for mobile
-                    if (isMobile) {
-                        if (audioRef.current) {
-                            audioRef.current.play().catch(() => { });
-                        }
-                        if (navigator.vibrate) {
-                            navigator.vibrate(300);
-                        }
+                if (isMobile) {
+                    if (audioRef.current) {
+                        audioRef.current.play().catch(() => { });
+                    }
+                    if (navigator.vibrate) {
+                        navigator.vibrate(300);
                     }
                 }
             }
@@ -61,7 +58,7 @@ const Navbar = () => {
             setNotifications(data);
             setUnseenCount(unseen.length);
         } catch (err) {
-            console.error('Failed to fetch notifications', err);
+            console.error('Fetch notifications error:', err);
         }
     };
 
@@ -72,7 +69,7 @@ const Navbar = () => {
             });
             fetchNotifications();
         } catch (err) {
-            console.error('Failed to mark as seen', err);
+            console.error('Mark all seen failed:', err);
         }
     };
 
@@ -81,7 +78,7 @@ const Navbar = () => {
             await axios.delete(`${BASE_URL}/delete/${id}`);
             fetchNotifications();
         } catch (err) {
-            console.error('Failed to delete notification', err);
+            console.error('Delete notification error:', err);
         }
     };
 
@@ -94,56 +91,27 @@ const Navbar = () => {
     }, [uid]);
 
     return (
-        <div className="px-6 py-6 top-0 z-10 relative">
+        <div className="px-6 py-6 top-0 z-10 relative bg-white dark:bg-black">
             <audio ref={audioRef} src="/notification.mp3" preload="auto" />
-            <div className='flex md:justify-evenly justify-between items-center'>
+            <div className='flex justify-between items-center'>
                 {/* Logo */}
-                <div className="flex gap-2 text-3xl font-bold items-center">
+                <div className="flex gap-2 text-2xl font-bold items-center">
                     <SlSocialSkype />
                     <span>Snappy</span>
                 </div>
 
-                {/* Mobile Hamburger */}
+                {/* Menu Toggle */}
                 <div className='md:hidden'>
-                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Toggle Menu">
+                    <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Menu">
                         <Menu className="h-6 w-6" />
                     </button>
                 </div>
 
                 {/* Desktop Menu */}
-                <div className='hidden md:flex gap-8 items-center relative'>
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Link to={`/u/${username}`}>
-                                    <User className="h-5 w-5" />
-                                </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>Profile</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Link to={`/posts`}>
-                                    <LayoutDashboard className="h-5 w-5" />
-                                </Link>
-                            </TooltipTrigger>
-                            <TooltipContent>Posts</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <a href="mailto:sukanil1357@gmail.com">
-                                    <Contact className="h-5 w-5" />
-                                </a>
-                            </TooltipTrigger>
-                            <TooltipContent>Contact</TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                <div className='hidden md:flex gap-6 items-center'>
+                    <Link to={`/u/${username}`}><User className="h-5 w-5" /></Link>
+                    <Link to="/posts"><LayoutDashboard className="h-5 w-5" /></Link>
+                    <a href="mailto:sukanil1357@gmail.com"><Contact className="h-5 w-5" /></a>
 
                     {/* Notifications */}
                     <div className="relative">
@@ -152,28 +120,26 @@ const Navbar = () => {
                                 setShowDropdown(!showDropdown);
                                 markAllSeen();
                             }}
+                            className="relative"
                         >
                             <Bell className="h-5 w-5" />
                             {unseenCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs px-1.5">
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1 rounded-full">
                                     {unseenCount}
                                 </span>
                             )}
                         </button>
-
                         {showDropdown && (
-                            <div className="absolute right-0 top-10 w-72 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-lg rounded-lg z-50">
-                                <div className="p-3 font-semibold border-b dark:border-gray-600">Notifications</div>
-                                <div className="max-h-64 overflow-y-auto">
+                            <div className="absolute right-0 top-10 w-72 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg z-50">
+                                <div className="p-3 font-semibold border-b">Notifications</div>
+                                <div className="max-h-60 overflow-y-auto">
                                     {notifications.length === 0 ? (
-                                        <div className="p-4 text-sm text-gray-500 dark:text-gray-300">
-                                            No notifications
-                                        </div>
+                                        <div className="p-4 text-sm text-gray-500">No notifications</div>
                                     ) : (
                                         notifications.map(n => (
                                             <div
                                                 key={n._id}
-                                                className={`p-3 text-sm flex justify-between items-start gap-2 ${!n.seen ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                                                className={`p-3 text-sm flex justify-between ${!n.seen ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
                                             >
                                                 <div className="flex flex-col">
                                                     <span>{n.message}</span>
@@ -183,7 +149,7 @@ const Navbar = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => deleteNotification(n._id)}
-                                                    className="text-red-500 text-xs hover:underline"
+                                                    className="text-red-500 text-xs"
                                                 >
                                                     ×
                                                 </button>
@@ -199,18 +165,61 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Mobile Dropdown */}
+            {/* Mobile Dropdown Menu */}
             {isMenuOpen && (
-                <div className="md:hidden mt-4 flex flex-col gap-4 shadow-lg rounded-md p-4 border-2">
+                <div className="md:hidden mt-4 flex flex-col gap-4 border p-4 rounded-md">
                     <Link className="flex items-center gap-2" to={`/u/${username}`}>
                         <User className="h-5 w-5" /> Profile
                     </Link>
-                    <Link className="flex items-center gap-2" to={`/posts`}>
+                    <Link className="flex items-center gap-2" to="/posts">
                         <LayoutDashboard className="h-5 w-5" /> Posts
                     </Link>
                     <a className="flex items-center gap-2" href="mailto:sukanil1357@gmail.com">
                         <Contact className="h-5 w-5" /> Contact
                     </a>
+
+                    {/* Notifications for mobile */}
+                    <div className="flex items-center gap-2" onClick={() => {
+                        setShowDropdown(!showDropdown);
+                        markAllSeen();
+                    }}>
+                        <Bell className="h-5 w-5" />
+                        Notifications
+                        {unseenCount > 0 && (
+                            <span className="ml-2 bg-red-500 text-white text-xs px-1 rounded-full">
+                                {unseenCount}
+                            </span>
+                        )}
+                    </div>
+
+                    {showDropdown && (
+                        <div className="bg-white dark:bg-gray-800 border mt-2 rounded-md max-h-60 overflow-y-auto">
+                            {notifications.length === 0 ? (
+                                <div className="p-4 text-sm text-gray-500">No notifications</div>
+                            ) : (
+                                notifications.map(n => (
+                                    <div
+                                        key={n._id}
+                                        className={`p-3 text-sm flex justify-between ${!n.seen ? 'bg-blue-100 dark:bg-blue-900' : ''}`}
+                                    >
+                                        <div className="flex flex-col">
+                                            <span>{n.message}</span>
+                                            <span className="text-xs text-gray-400">
+                                                {new Date(n.timestamp).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => deleteNotification(n._id)}
+                                            className="text-red-500 text-xs"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
                     <Button onClick={logOut}>Logout</Button>
                 </div>
             )}
