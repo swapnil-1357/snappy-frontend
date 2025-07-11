@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SlSocialSkype } from "react-icons/sl";
 import { User, LayoutDashboard, Contact, Menu, Bell } from "lucide-react";
 import { Link } from 'react-router-dom';
@@ -16,7 +16,6 @@ import { useToast } from '@/components/ui/use-toast';
 
 const BASE_URL = import.meta.env.VITE_NOTIFICATION_URL || 'http://localhost:3000/api/notifications';
 
-
 const Navbar = () => {
     const { theme } = useTheme();
     const { logOut, userDetails } = useAuth();
@@ -30,6 +29,9 @@ const Navbar = () => {
     const [notifications, setNotifications] = useState([]);
     const [unseenCount, setUnseenCount] = useState(0);
 
+    const audioRef = useRef(null);
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
     const fetchNotifications = async () => {
         if (!uid) return;
         try {
@@ -37,17 +39,27 @@ const Navbar = () => {
                 headers: { uid }
             });
             const data = res.data;
-            const newUnseen = data.filter(n => !n.seen);
+            const unseen = data.filter(n => !n.seen);
 
-            if (newUnseen.length > unseenCount) {
-                const latest = newUnseen[0];
-                toast({
-                    title: latest.message,
-                });
+            if (unseen.length > unseenCount && notifications.length > 0) {
+                const latest = unseen.find(n => !notifications.some(p => p._id === n._id));
+                if (latest) {
+                    toast({ title: latest.message });
+
+                    // 🔊 Sound and vibration for mobile
+                    if (isMobile) {
+                        if (audioRef.current) {
+                            audioRef.current.play().catch(() => { });
+                        }
+                        if (navigator.vibrate) {
+                            navigator.vibrate(300);
+                        }
+                    }
+                }
             }
 
             setNotifications(data);
-            setUnseenCount(newUnseen.length);
+            setUnseenCount(unseen.length);
         } catch (err) {
             console.error('Failed to fetch notifications', err);
         }
@@ -82,10 +94,11 @@ const Navbar = () => {
     }, [uid]);
 
     return (
-        <div className="px-10 py-10 top-0 z-10 relative">
+        <div className="px-6 py-6 top-0 z-10 relative">
+            <audio ref={audioRef} src="/notification.mp3" preload="auto" />
             <div className='flex md:justify-evenly justify-between items-center'>
                 {/* Logo */}
-                <div className="flex gap-2 text-4xl font-bold items-center">
+                <div className="flex gap-2 text-3xl font-bold items-center">
                     <SlSocialSkype />
                     <span>Snappy</span>
                 </div>
@@ -99,7 +112,6 @@ const Navbar = () => {
 
                 {/* Desktop Menu */}
                 <div className='hidden md:flex gap-8 items-center relative'>
-                    {/* Profile */}
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -111,7 +123,6 @@ const Navbar = () => {
                         </Tooltip>
                     </TooltipProvider>
 
-                    {/* Posts */}
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -123,7 +134,6 @@ const Navbar = () => {
                         </Tooltip>
                     </TooltipProvider>
 
-                    {/* Contact */}
                     <TooltipProvider>
                         <Tooltip>
                             <TooltipTrigger asChild>
@@ -185,7 +195,6 @@ const Navbar = () => {
                         )}
                     </div>
 
-                    {/* Logout */}
                     <Button onClick={logOut}>Logout</Button>
                 </div>
             </div>
