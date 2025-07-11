@@ -13,8 +13,10 @@ import { Button } from './ui/button';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from './ThemeProvider';
 import { useToast } from '@/components/ui/use-toast';
+import { io } from 'socket.io-client';
 
 const BASE_URL = import.meta.env.VITE_NOTIFICATION_URL || 'http://localhost:3000/api/notifications';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
 
 const Navbar = () => {
     const { theme } = useTheme();
@@ -30,6 +32,7 @@ const Navbar = () => {
     const [unseenCount, setUnseenCount] = useState(0);
 
     const audioRef = useRef(null);
+    const socketRef = useRef(null);
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     const fetchNotifications = async () => {
@@ -40,21 +43,6 @@ const Navbar = () => {
             });
             const data = res.data;
             const unseen = data.filter(n => !n.seen);
-
-            const latestUnseen = unseen.find(n => !notifications.some(p => p._id === n._id));
-            if (latestUnseen) {
-                toast({ title: latestUnseen.message });
-
-                if (isMobile) {
-                    if (audioRef.current) {
-                        audioRef.current.play().catch(() => { });
-                    }
-                    if (navigator.vibrate) {
-                        navigator.vibrate(300);
-                    }
-                }
-            }
-
             setNotifications(data);
             setUnseenCount(unseen.length);
         } catch (err) {
@@ -83,37 +71,63 @@ const Navbar = () => {
     };
 
     useEffect(() => {
-        if (uid) {
-            fetchNotifications();
-            const interval = setInterval(fetchNotifications, 10000);
-            return () => clearInterval(interval);
-        }
+        if (!uid) return;
+
+        fetchNotifications();
+
+        const socket = io(SOCKET_URL, {
+            transports: ['websocket']
+        });
+        socketRef.current = socket;
+
+        // Register this user
+        socket.emit('register', uid);
+
+        // Listen for notifications
+        socket.on('new_notification', (newNotif) => {
+            setNotifications(prev => [newNotif, ...prev]);
+            setUnseenCount(prev => prev + 1);
+
+            toast({
+                title: 'New Notification',
+                description: newNotif.message,
+            });
+
+            if (isMobile) {
+                if (audioRef.current) {
+                    audioRef.current.play().catch(() => { });
+                }
+                if (navigator.vibrate) {
+                    navigator.vibrate(300);
+                }
+            }
+        });
+
+        return () => {
+            socket.disconnect();
+        };
     }, [uid]);
 
     return (
         <div className="px-6 py-6 top-0 z-10 relative bg-white dark:bg-black">
             <audio ref={audioRef} src="/notification.mp3" preload="auto" />
             <div className='flex justify-between items-center'>
-                {/* Logo */}
                 <div className="flex gap-2 text-2xl font-bold items-center">
                     <SlSocialSkype />
                     <span>Snappy</span>
                 </div>
 
-                {/* Menu Toggle */}
                 <div className='md:hidden'>
                     <button onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label="Menu">
                         <Menu className="h-6 w-6" />
                     </button>
                 </div>
 
-                {/* Desktop Menu */}
                 <div className='hidden md:flex gap-6 items-center'>
                     <Link to={`/u/${username}`}><User className="h-5 w-5" /></Link>
                     <Link to="/posts"><LayoutDashboard className="h-5 w-5" /></Link>
                     <a href="mailto:sukanil1357@gmail.com"><Contact className="h-5 w-5" /></a>
 
-                    {/* Notifications */}
                     <div className="relative">
                         <button
                             onClick={() => {
@@ -178,7 +192,6 @@ const Navbar = () => {
                         <Contact className="h-5 w-5" /> Contact
                     </a>
 
-                    {/* Notifications for mobile */}
                     <div className="flex items-center gap-2" onClick={() => {
                         setShowDropdown(!showDropdown);
                         markAllSeen();
