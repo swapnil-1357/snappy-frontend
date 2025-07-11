@@ -1,67 +1,31 @@
-import * as tf from '@tensorflow/tfjs';
-import * as use from '@tensorflow-models/universal-sentence-encoder';
 import Fuse from 'fuse.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 export const useHybridSearch = (data = [], key = 'username') => {
-    const [model, setModel] = useState(null);
     const [fuse, setFuse] = useState(null);
 
+    const fuseOptions = useMemo(() => ({
+        keys: [key],
+        threshold: 0.35,           // Fuzzy/typo tolerance (0.0 exact, 1.0 everything)
+        ignoreLocation: true,      // Match anywhere in string
+        includeScore: true,        // Optional: for future ranking if needed
+        minMatchCharLength: 2,     // Ignore very short noise
+    }), [key]);
+
     useEffect(() => {
-        let isMounted = true;
+        if (data.length) {
+            setFuse(new Fuse(data, fuseOptions));
+        }
+    }, [data, fuseOptions]);
 
-        const load = async () => {
-            await tf.setBackend('cpu');
-            await tf.ready();
+    const search = (query) => {
+        if (!query.trim() || !fuse) return data;
 
-            const m = await use.load();
-            if (isMounted) {
-                setModel(m);
-                setFuse(
-                    new Fuse(data, {
-                        keys: [key],
-                        threshold: 0.4
-                    })
-                );
-            }
-        };
-
-        load();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [key]); // ❗ do NOT include `data` here or it'll trigger infinite re-renders
-
-    const search = async (query) => {
-        if (!query.trim() || !model || !fuse) return data;
-
-        const fuseResults = fuse.search(query).map(r => ({
-            item: r.item,
-            fuseScore: 1 - r.score
-        }));
-
-        const inputTexts = data.map(d => d[key]);
-        const embeddings = await model.embed([query, ...inputTexts]);
-        const queryVec = embeddings.slice([0, 0], [1]);
-        const postVecs = embeddings.slice([1]);
-        const simScores = await tf.matMul(queryVec, postVecs, false, true).data();
-
-        const combined = data.map((item, i) => {
-            const fuseMatch = fuseResults.find(f => f.item === item);
-            const fuseScore = fuseMatch?.fuseScore || 0;
-            const semanticScore = simScores[i];
-            const finalScore = (semanticScore * 0.6) + (fuseScore * 0.4);
-            return { item, finalScore };
-        });
-
-        return combined
-            .sort((a, b) => b.finalScore - a.finalScore)
-            .map(r => r.item);
+        return fuse.search(query).map(result => result.item);
     };
 
     return {
         search,
-        isReady: !!model && !!fuse
+        isReady: !!fuse,
     };
 };
