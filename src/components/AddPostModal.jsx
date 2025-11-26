@@ -19,7 +19,6 @@ import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 import { GoogleGenAI } from "@google/genai";
 
 
-const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY)
 
 const AddPostModal = () => {
     const [caption, setCaption] = useState('')
@@ -42,6 +41,8 @@ const AddPostModal = () => {
     }
 
     const generateCaptionsFromImage = async (base64Image, mimeType) => {
+        const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY)
+
         try {
             setIsGeneratingCaptions(true)
 
