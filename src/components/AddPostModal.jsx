@@ -16,9 +16,10 @@ import { Input } from '@/components/ui/input'
 import { Loader2, Plus, X } from 'lucide-react'
 import { usePost } from '@/context/PostContext'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenAI } from "@google/genai";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY)
+
+const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY)
 
 const AddPostModal = () => {
     const [caption, setCaption] = useState('')
@@ -44,9 +45,12 @@ const AddPostModal = () => {
         try {
             setIsGeneratingCaptions(true)
 
-            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+            // const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
-            const result = await model.generateContent([
+            const result = await genAI.models.generateContent({
+                model:'gemini-2.5-flash',
+                contents:
+                [
                 { text: 'Suggest 4 short and catchy Instagram captions (max 10 words) for this image. Return only the captions without extra text.' },
                 {
                     inlineData: {
@@ -54,9 +58,9 @@ const AddPostModal = () => {
                         data: base64Image.split(',')[1],
                     },
                 },
-            ])
+            ],})
 
-            const rawText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+            const rawText = result.text || ''
             const lines = rawText.split('\n').map(line => line.trim()).filter(Boolean)
 
             const filteredCaptions = lines
