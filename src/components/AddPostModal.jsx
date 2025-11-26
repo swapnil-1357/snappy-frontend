@@ -41,12 +41,14 @@ const AddPostModal = () => {
     }
 
     const generateCaptionsFromImage = async (base64Image, mimeType) => {
-        const genAI = new GoogleGenAI(import.meta.env.VITE_GEMINI_API_KEY)
+        
+        
 
         try {
+            const str = import.meta.env.VITE_GEMINI_API_KEY
+            // console.log('Using Gemini API Key:',str )
+            const genAI = new GoogleGenAI({ apiKey: str })
             setIsGeneratingCaptions(true)
-
-            // const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
             const result = await genAI.models.generateContent({
                 model:'gemini-2.5-flash',
