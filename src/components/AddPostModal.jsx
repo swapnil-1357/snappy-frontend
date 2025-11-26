@@ -2,23 +2,37 @@
 import React, { useRef, useState } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/components/ui/use-toast'
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogFooter, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+    Dialog,
+    DialogTrigger,
+    DialogContent,
+    DialogHeader,
+    DialogFooter,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Loader2, Plus, X } from 'lucide-react'
 import { usePost } from '@/context/PostContext'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY)
 
 const AddPostModal = () => {
     const [caption, setCaption] = useState('')
+    const [captionSuggestions, setCaptionSuggestions] = useState([])
     const [selectedPreview, setSelectedPreview] = useState(null)
     const [file, setFile] = useState(null)
     const [open, setOpen] = useState(false)
     const [isPostAdding, setIsPostAdding] = useState(false)
+    const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false)
+
     const { userDetails } = useAuth()
-    const fileInputRef = useRef(null)
     const { toast } = useToast()
     const { addPost } = usePost()
+    const fileInputRef = useRef(null)
 
     const handleCaptionChange = (e) => {
         if (e.target.value.length <= 100) {
@@ -26,7 +40,45 @@ const AddPostModal = () => {
         }
     }
 
-    const handleFileChange = (e) => {
+    const generateCaptionsFromImage = async (base64Image, mimeType) => {
+        try {
+            setIsGeneratingCaptions(true)
+
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+
+            const result = await model.generateContent([
+                { text: 'Suggest 4 short and catchy Instagram captions (max 10 words) for this image. Return only the captions without extra text.' },
+                {
+                    inlineData: {
+                        mimeType,
+                        data: base64Image.split(',')[1],
+                    },
+                },
+            ])
+
+            const rawText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+            const lines = rawText.split('\n').map(line => line.trim()).filter(Boolean)
+
+            const filteredCaptions = lines
+                .map(line => line.replace(/^\d+[\.\)]?\s*/, '')) // remove numbering
+                .filter(line => line.split(/\s+/).length <= 10)
+
+            setCaptionSuggestions(filteredCaptions)
+        } catch (error) {
+            console.error('Gemini Caption Error:', error)
+            setCaptionSuggestions([])
+
+            toast({
+                title: 'AI Error',
+                description: 'AI is overloaded. Try again later.',
+                variant: 'destructive',
+            })
+        } finally {
+            setIsGeneratingCaptions(false)
+        }
+    }
+
+    const handleFileChange = async (e) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0]
 
@@ -39,10 +91,11 @@ const AddPostModal = () => {
                 return
             }
 
-            setFile(selectedFile)
             const reader = new FileReader()
-            reader.onloadend = () => {
+            reader.onloadend = async () => {
                 setSelectedPreview(reader.result)
+                setFile(selectedFile)
+                await generateCaptionsFromImage(reader.result, selectedFile.type)
             }
             reader.readAsDataURL(selectedFile)
         }
@@ -52,6 +105,7 @@ const AddPostModal = () => {
         setSelectedPreview(null)
         setFile(null)
         setCaption('')
+        setCaptionSuggestions([])
     }
 
     const handleSubmit = async () => {
@@ -67,7 +121,7 @@ const AddPostModal = () => {
 
         setIsPostAdding(true)
         try {
-            const res = await addPost(userDetails.username, file, caption)
+            await addPost(userDetails.username, file, caption)
 
             toast({
                 title: 'Success',
@@ -77,7 +131,6 @@ const AddPostModal = () => {
 
             removePreview()
             setOpen(false)
-
         } catch (err) {
             toast({
                 title: 'Error',
@@ -119,10 +172,12 @@ const AddPostModal = () => {
                         Add a caption and upload an image or video (max 10MB)
                     </DialogDescription>
                 </DialogHeader>
+
                 <div>
                     <label
                         htmlFor="file-upload"
-                        className={`block w-full ${selectedPreview ? 'h-[400px]' : 'h-48'} bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
+                        className={`block w-full ${selectedPreview ? 'h-[400px]' : 'h-48'
+                            } bg-gray-100 border-2 border-dashed border-gray-300 rounded flex items-center justify-center cursor-pointer`}
                     >
                         {selectedPreview ? (
                             <div className="relative w-full h-full">
@@ -148,7 +203,9 @@ const AddPostModal = () => {
                                 </button>
                             </div>
                         ) : (
-                            <div className="text-gray-500" onClick={handleIconClick}>Select File</div>
+                            <div className="text-gray-500" onClick={handleIconClick}>
+                                Select File
+                            </div>
                         )}
                     </label>
                     <input
@@ -159,7 +216,32 @@ const AddPostModal = () => {
                         className="hidden"
                     />
                 </div>
-                <div>
+
+                {/* Loader and caption suggestions */}
+                {isGeneratingCaptions ? (
+                    <div className="flex justify-center items-center my-4">
+                        <Loader2 className="animate-spin w-5 h-5 text-gray-500" />
+                        <span className="ml-2 text-sm text-gray-500">Generating captions...</span>
+                    </div>
+                ) : captionSuggestions.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                        <p className="text-sm text-gray-600">AI Caption Suggestions:</p>
+                        <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                            {captionSuggestions.map((sug, idx) => (
+                                <Button
+                                    key={idx}
+                                    variant="outline"
+                                    className="w-full text-left whitespace-normal"
+                                    onClick={() => setCaption(sug)}
+                                >
+                                    {sug}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <div className="mt-4">
                     <Input
                         autoComplete="off"
                         id="caption"
@@ -168,6 +250,7 @@ const AddPostModal = () => {
                         onChange={handleCaptionChange}
                     />
                 </div>
+
                 <DialogFooter>
                     <Button onClick={handleSubmit} disabled={isPostAdding}>
                         {isPostAdding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
